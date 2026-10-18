@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,7 +33,7 @@ jobs:
 
       - name: Build OSINT, Master & Slave APKs
         run: |
-          ./gradlew assembleDebug || (sh gradlew assembleDebug)
+          sh gradlew assembleDebug
           mkdir -p out
           cp osint/build/outputs/apk/debug/osint-debug.apk out/osint-master.apk
           cp master/build/outputs/apk/debug/master-debug.apk out/master-control.apk
@@ -48,6 +51,7 @@ jobs:
             out/chat-slave.apk
           draft: false
           prerelease: false
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
