@@ -1,0 +1,33 @@
+name: Validate Cloudflare signaling Worker
+
+on:
+  pull_request:
+    paths:
+      - "cloudflare/**"
+      - "wrangler.toml"
+      - ".github/workflows/validate-cloudflare.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "cloudflare/**"
+      - "wrangler.toml"
+      - ".github/workflows/validate-cloudflare.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check Worker JavaScript syntax
+        run: node --check cloudflare/worker.js
+      - name: Validate Wrangler configuration and Worker bundle
+        run: npx --yes wrangler@4 deploy --dry-run --outdir .wrangler-dry-run
+      - name: Confirm generated bundle exists
+        run: test -s .wrangler-dry-run/index.js
