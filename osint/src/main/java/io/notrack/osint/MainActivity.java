@@ -1,9 +1,12 @@
 package io.notrack.osint;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebChromeClient;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -45,8 +48,20 @@ public class MainActivity extends AppCompatActivity {
             .connectTimeout(40, TimeUnit.SECONDS).build();
         vpnClient = new OkHttpClient.Builder().build();
 
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return routeUrl(request.getUrl().toString());
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return routeUrl(url);
+            }
+        });
         web.setWebChromeClient(new WebChromeClient());
+        web.getSettings().setJavaScriptEnabled(true);
+        web.getSettings().setDomStorageEnabled(true);
         web.loadUrl("https://www.google.com");
 
         findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
@@ -55,6 +70,31 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_tor).setOnClickListener(v -> toggleTor());
         findViewById(R.id.btn_vpn).setOnClickListener(v -> toggleVpn());
         findViewById(R.id.btn_mem).setOnClickListener(v -> showMemory());
+    }
+
+    // Google blocks account sign-in inside embedded WebViews. Keep browsing in-app,
+    // but hand authentication pages to the user's installed supported browser.
+    private boolean routeUrl(String url) {
+        Uri uri = Uri.parse(url);
+        String host = uri.getHost();
+        if (host != null && isGoogleAuthHost(host)) {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                startActivity(intent);
+                status.setText("Opened Google sign-in in your browser");
+            } catch (Exception e) {
+                status.setText("No supported browser found for sign-in");
+                Toast.makeText(this, "Install or enable a supported browser to sign in", Toast.LENGTH_LONG).show();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isGoogleAuthHost(String host) {
+        return host.equalsIgnoreCase("accounts.google.com")
+            || host.equalsIgnoreCase("myaccount.google.com")
+            || host.equalsIgnoreCase("consent.google.com");
     }
 
     private String q() {
@@ -97,22 +137,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void toggleTor() {
-        status.setText("Routing through Tor (SOCKS 9050) ...");
-        web.loadUrl("https://check.torproject.org");
-        Toast.makeText(this, "Tor mode: ON", Toast.LENGTH_SHORT).show();
+        status.setText("Tor routing is not configured by this button. Install and configure a Tor service first.");
+        Toast.makeText(this, "This button does not enable Tor by itself", Toast.LENGTH_LONG).show();
     }
 
     private void toggleVpn() {
-        status.setText("Routing through VPN ...");
-        web.loadUrl("https://ifconfig.co");
-        Toast.makeText(this, "VPN mode: ON", Toast.LENGTH_SHORT).show();
+        status.setText("VPN uses Android system VPN settings; this button cannot enable a VPN by itself.");
+        Toast.makeText(this, "Connect a VPN in Android Settings first", Toast.LENGTH_LONG).show();
     }
 
     private void showMemory() {
         String mem = "Local OSINT memory store:\n\n" +
-            "Recent searches:\n" + q() + "\n\n" +
-            "Cached results: " + web.getUrl() + "\n\n" +
-            "All queries saved to free-source memory." ;
+            "Current search fields:\n" + q() + "\n\n" +
+            "Current page: " + web.getUrl() + "\n\n" +
+            "This screen does not persist search history.";
         Toast.makeText(this, mem, Toast.LENGTH_LONG).show();
     }
 
