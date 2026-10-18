@@ -23,37 +23,46 @@ jobs:
 
       - name: Install Android SDK
         run: |
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
-          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o tools.zip
-          unzip tools.zip
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd "$ANDROID_HOME/cmdline-tools"
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o tools.zip
+          unzip -q tools.zip
           mv cmdline-tools latest
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Build OSINT, Master & Slave APKs
         run: |
-          sh gradlew assembleDebug
+          sh gradlew --no-daemon clean assembleDebug
           mkdir -p out
           cp osint/build/outputs/apk/debug/osint-debug.apk out/osint-master.apk
           cp master/build/outputs/apk/debug/master-debug.apk out/master-control.apk
           cp slave/build/outputs/apk/debug/slave-debug.apk out/chat-slave.apk
           ls -lh out
 
-      - name: Upload APKs as release (public download URL)
+      - name: Generate SHA-256 checksums
+        run: |
+          cd out
+          sha256sum osint-master.apk master-control.apk chat-slave.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload APKs as release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0
-          name: OSINT + Master/Slave APKs
+          tag_name: v1.0.${{ github.run_number }}
+          name: OSINT + Master/Slave APKs v1.0.${{ github.run_number }}
           files: |
             out/osint-master.apk
             out/master-control.apk
             out/chat-slave.apk
+            out/SHA256SUMS.txt
           draft: false
           prerelease: false
 
       - name: Upload artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: apks
-          path: out/*.apk
+          path: out/*
+          if-no-files-found: error
