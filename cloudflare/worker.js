@@ -1,5 +1,3 @@
-export { SignalRoom };
-
 const ROOM_RE = /^[A-Za-z0-9_-]{16,64}$/;
 
 export default {
