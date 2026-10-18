@@ -5,8 +5,10 @@ import android.os.Handler;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
+import android.content.Intent;
+import android.net.Uri;
 import androidx.appcompat.app.AppCompatActivity;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -19,92 +21,86 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private ListView list;
-    private EditText input;
-    private ArrayList<String> msgs = new ArrayList<>();
-    private ServerSocket serverSocket;
-    private ExecutorService pool = Executors.newCachedThreadPool();
-    private boolean running = true;
-    private Handler h = new Handler();
+    private EditText input, peerIp;
+    private final ArrayList<String> messages = new ArrayList<>();
+    private volatile boolean running = true;
+    private final ExecutorService pool = Executors.newCachedThreadPool();
+    private final Handler handler = new Handler();
     private TextView status;
+    private ServerSocket serverSocket;
+    private ArrayAdapter<String> adapter;
 
-    @Override
-    protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
         setContentView(R.layout.activity_slave);
-        findViewById(R.id.btn_update).setOnClickListener(v -> {
-            try {
-                startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest")));
-                status.setText("Opened latest release page");
-            } catch (Exception e) {
-                status.setText("Unable to open release page");
-            }
-        });
         list = findViewById(R.id.list);
         input = findViewById(R.id.input);
+        peerIp = findViewById(R.id.peer_ip);
         status = findViewById(R.id.status);
-        ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, msgs);
-        list.setAdapter(a);
-
-        // Slave = the server. Opens a local port on THIS phone, master connects here over internet
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, messages);
+        list.setAdapter(adapter);
+        peerIp.setText(getSharedPreferences("slave", 0).getString("master_ip", ""));
+        findViewById(R.id.btn_update).setOnClickListener(v -> openUpdates());
+        findViewById(R.id.btn_send).setOnClickListener(v -> sendMessage());
         pool.execute(() -> {
             try {
-                serverSocket = new ServerSocket(9876);
-                status("Slave server listening on port 9876");
+                ServerSocket listener = new ServerSocket(9876);
+                serverSocket = listener;
+                status("Listening on port 9876");
                 while (running) {
-                    Socket client = serverSocket.accept();
+                    Socket client = listener.accept();
                     pool.execute(() -> handleClient(client));
                 }
-            } catch (Exception e) { status("Server error: " + e.getMessage()); }
-        });
-
-        findViewById(R.id.btn_send).setOnClickListener(v -> {
-            String t = input.getText().toString();
-            if (t.isEmpty()) return;
-            msgs.add("You: " + t);
-            input.setText("");
-            a.notifyDataSetChanged();
-            sendToMaster("SMS:" + t);
+            } catch (Exception e) { if (running) status("Server error: " + e.getMessage()); }
         });
     }
 
-    private void handleClient(Socket s) {
-        try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+    private void sendMessage() {
+        String text = input.getText().toString().trim();
+        String host = peerIp.getText().toString().trim();
+        if (text.isEmpty()) { input.setError("Enter a message"); return; }
+        if (host.isEmpty()) { peerIp.setError("Enter the Master IP or hostname"); return; }
+        getSharedPreferences("slave", 0).edit().putString("master_ip", host).apply();
+        input.setText("");
+        addMessage("You: " + text + " (sending...)");
+        pool.execute(() -> {
+            try (Socket socket = new Socket()) {
+                socket.connect(new java.net.InetSocketAddress(host, 9877), 5000);
+                socket.setSoTimeout(5000);
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                out.println("MESSAGE:" + text);
+                String response = in.readLine();
+                if ("OK".equals(response)) status("Message delivered to Master");
+                else status("Connected, but delivery was not acknowledged");
+                out.println("BYE");
+            } catch (Exception e) { status("Send failed to " + host + ": " + e.getMessage()); }
+        });
+    }
+
+    private void handleClient(Socket socket) {
+        try (Socket s = socket;
+             BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+             PrintWriter out = new PrintWriter(s.getOutputStream(), true)) {
             String line;
-            while ((line = in.readLine()) != null) {
-                if (line.equals("BYE")) break;
-                // Master sent a command or data — capture it and show locally
-                msgs.add("Master: " + line);
-                h.post(() -> {
-                    ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, msgs);
-                    list.setAdapter(a);
-                });
+            while (running && (line = in.readLine()) != null) {
+                if ("BYE".equals(line)) break;
+                addMessage("Master: " + line);
                 out.println("ACK:" + line);
             }
-        } catch (Exception e) {} finally {
-            try { s.close(); } catch (Exception e) {}
-        }
+        } catch (Exception e) { if (running) status("Peer connection ended: " + e.getMessage()); }
     }
 
-    private void sendToMaster(String msg) {
-        pool.execute(() -> {
-            try {
-                // Master's IP is stored in shared prefs — set it from the Master app
-                String masterIp = getSharedPreferences("slave", 0).getString("master_ip", "127.0.0.1");
-                Socket s = new Socket(masterIp, 9877);
-                PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-                out.println(msg);
-                out.println("BYE");
-                s.close();
-            } catch (Exception e) {
-                // Master not reachable — data stays in local buffer, sent next time
-            }
-        });
+    private void addMessage(String message) { handler.post(() -> { messages.add(message); adapter.notifyDataSetChanged(); }); }
+    private void status(String value) { handler.post(() -> status.setText(value)); }
+    private void openUpdates() {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest"))); }
+        catch (Exception e) { Toast.makeText(this, "Unable to open release page", Toast.LENGTH_LONG).show(); }
     }
-
-    private void status(String t) {
-        h.post(() -> status.setText(t));
+    @Override protected void onDestroy() {
+        running = false;
+        try { if (serverSocket != null) serverSocket.close(); } catch (Exception ignored) {}
+        pool.shutdownNow();
+        super.onDestroy();
     }
 }
