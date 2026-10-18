@@ -43,8 +43,8 @@ public class MainActivity extends AppCompatActivity {
                 serverSocket = new ServerSocket(9876);
                 status("Slave server listening on port 9876");
                 while (running) {
-                    Socket s = serverSocket.accept();
-                    pool.execute(() -> handleClient(s));
+                    Socket client = serverSocket.accept();
+                    pool.execute(() -> handleClient(client));
                 }
             } catch (Exception e) { status("Server error: " + e.getMessage()); }
         });
