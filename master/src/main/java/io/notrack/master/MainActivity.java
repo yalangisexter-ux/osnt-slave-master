@@ -5,8 +5,10 @@ import android.os.Handler;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
+import android.content.Intent;
+import android.net.Uri;
 import androidx.appcompat.app.AppCompatActivity;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -19,82 +21,87 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private ListView list;
-    private ArrayList<String> events = new ArrayList<>();
-    private ExecutorService pool = Executors.newCachedThreadPool();
-    private Handler h = new Handler();
+    private EditText peerIp;
+    private final ArrayList<String> events = new ArrayList<>();
+    private final ExecutorService pool = Executors.newCachedThreadPool();
+    private final Handler handler = new Handler();
     private TextView status;
+    private volatile boolean running = true;
     private ServerSocket serverSocket;
-    private boolean running = true;
+    private ArrayAdapter<String> adapter;
 
-    @Override
-    protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
         setContentView(R.layout.activity_master);
-        findViewById(R.id.btn_update).setOnClickListener(v -> {
-            try {
-                startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest")));
-                status.setText("Opened latest release page");
-            } catch (Exception e) {
-                status.setText("Unable to open release page");
-            }
-        });
         list = findViewById(R.id.list);
+        peerIp = findViewById(R.id.peer_ip);
         status = findViewById(R.id.status);
-        ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, events);
-        list.setAdapter(a);
-        events.add("Master server started on port 9877");
-        a.notifyDataSetChanged();
-
-        // Master = also a server. Opens port 9877 on THIS phone. Slave pushes data here over internet.
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, events);
+        list.setAdapter(adapter);
+        peerIp.setText(getSharedPreferences("master", 0).getString("slave_ip", ""));
+        findViewById(R.id.btn_update).setOnClickListener(v -> openUpdates());
+        findViewById(R.id.btn_connect).setOnClickListener(v -> connectToSlave());
+        addEvent("Master started. Listening on TCP port 9877.");
         pool.execute(() -> {
             try {
-                serverSocket = new ServerSocket(9877);
-                status("Master listening on port 9877");
+                ServerSocket listener = new ServerSocket(9877);
+                serverSocket = listener;
+                status("Listening on port 9877");
                 while (running) {
-                    Socket client = serverSocket.accept();
+                    Socket client = listener.accept();
                     pool.execute(() -> handleSlave(client));
                 }
-            } catch (Exception e) { status("Error: " + e.getMessage()); }
-        });
-
-        // Master also connects TO the slave (port 9876) to pull data and send commands
-        pool.execute(() -> {
-            while (running) {
-                try {
-                    String slaveIp = getSharedPreferences("master", 0).getString("slave_ip", "127.0.0.1");
-                    Socket slaveSocket = new Socket(slaveIp, 9876);
-                    events.add("Connected to slave");
-                    h.post(() -> { ArrayAdapter<String> a2 = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, events); list.setAdapter(a2); });
-                    slaveSocket.close();
-                } catch (Exception e) {
-                    // Slave not reachable yet — keep trying every 5s
-                    try { Thread.sleep(5000); } catch (Exception ex) {}
-                }
+            } catch (Exception e) {
+                if (running) status("Server error: " + e.getMessage());
             }
         });
     }
 
-    private void handleSlave(Socket s) {
-        try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+    private void connectToSlave() {
+        String host = peerIp.getText().toString().trim();
+        if (host.isEmpty()) { peerIp.setError("Enter the Slave IP or hostname"); return; }
+        getSharedPreferences("master", 0).edit().putString("slave_ip", host).apply();
+        pool.execute(() -> {
+            try (Socket socket = new Socket()) {
+                socket.connect(new java.net.InetSocketAddress(host, 9876), 5000);
+                socket.setSoTimeout(5000);
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                out.println("PING");
+                String response = in.readLine();
+                if ("ACK:PING".equals(response)) {
+                    addEvent("Connected to Slave at " + host);
+                    status("Connection test successful: " + host);
+                } else status("Connected, but unexpected response from " + host);
+            } catch (Exception e) { status("Cannot reach " + host + ": " + e.getMessage()); }
+        });
+    }
+
+    private void handleSlave(Socket socket) {
+        try (Socket s = socket;
+             BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+             PrintWriter out = new PrintWriter(s.getOutputStream(), true)) {
             String line;
-            while ((line = in.readLine()) != null) {
-                if (line.equals("BYE")) break;
-                events.add("From slave: " + line);
-                h.post(() -> {
-                    ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, events);
-                    list.setAdapter(a);
-                });
+            while (running && (line = in.readLine()) != null) {
+                if ("BYE".equals(line)) break;
+                addEvent("Slave: " + line);
                 out.println("OK");
             }
-        } catch (Exception e) {} finally {
-            try { s.close(); } catch (Exception e) {}
-        }
+        } catch (Exception e) { if (running) status("Peer connection ended: " + e.getMessage()); }
     }
 
-    private void status(String t) {
-        h.post(() -> status.setText(t));
+    private void addEvent(String event) {
+        handler.post(() -> { events.add(event); adapter.notifyDataSetChanged(); });
+    }
+    private void status(String value) { handler.post(() -> status.setText(value)); }
+    private void openUpdates() {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest"))); }
+        catch (Exception e) { Toast.makeText(this, "Unable to open release page", Toast.LENGTH_LONG).show(); }
+    }
+    @Override protected void onDestroy() {
+        running = false;
+        try { if (serverSocket != null) serverSocket.close(); } catch (Exception ignored) {}
+        pool.shutdownNow();
+        super.onDestroy();
     }
 }
