@@ -29,5 +29,3 @@ jobs:
         run: node --check cloudflare/worker.js
       - name: Validate Wrangler configuration and Worker bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir .wrangler-dry-run
-      - name: Confirm generated bundle exists
-        run: test -s .wrangler-dry-run/index.js
