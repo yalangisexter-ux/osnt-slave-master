@@ -1,0 +1,60 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="#0a0e15" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="14dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="OSINT Master" android:textColor="#ec4899" android:textSize="22sp"
+            android:textStyle="bold" android:layout_marginBottom="6dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Deep search · Tor · VPN · Dark web · Memory" android:textColor="#8a97a8" android:textSize="12sp"
+            android:layout_marginBottom="10dp"/>
+        <EditText android:id="@+id/in_phone" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Phone number" android:inputType="phone" android:background="#141b26"
+            android:textColor="#e8eef7" android:padding="10dp" android:layout_marginBottom="6dp"/>
+        <EditText android:id="@+id/in_email" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Email address" android:inputType="textEmailAddress" android:background="#141b26"
+            android:textColor="#e8eef7" android:padding="10dp" android:layout_marginBottom="6dp"/>
+        <EditText android:id="@+id/in_user" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Username / handle" android:inputType="text" android:background="#141b26"
+            android:textColor="#e8eef7" android:padding="10dp" android:layout_marginBottom="6dp"/>
+        <EditText android:id="@+id/in_domain" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Domain" android:inputType="text" android:background="#141b26"
+            android:textColor="#e8eef7" android:padding="10dp" android:layout_marginBottom="6dp"/>
+        <EditText android:id="@+id/in_ip" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="IP address" android:inputType="text" android:background="#141b26"
+            android:textColor="#e8eef7" android:padding="10dp" android:layout_marginBottom="6dp"/>
+        <EditText android:id="@+id/in_url" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="URL / anything" android:inputType="textUri" android:background="#141b26"
+            android:textColor="#e8eef7" android:padding="10dp" android:layout_marginBottom="10dp"/>
+        <Spinner android:id="@+id/engine" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="#141b26" android:layout_marginBottom="6dp"
+            android:entries="@array/engines"/>
+        <Spinner android:id="@+id/mode" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="#141b26" android:layout_marginBottom="10dp"
+            android:entries="@array/modes"/>
+        <Button android:id="@+id/btn_search" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Deep Search" android:background="#ec4899" android:textColor="#fff"
+            android:layout_marginBottom="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="8dp">
+            <Button android:id="@+id/btn_web" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:text="Web" android:background="#2dd4bf" android:textColor="#0a0e15"/>
+            <Button android:id="@+id/btn_dark" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:text="Dark web" android:background="#8b5cf6" android:textColor="#fff"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="10dp">
+            <Button android:id="@+id/btn_tor" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:text="Tor" android:background="#f59e0b" android:textColor="#0a0e15"/>
+            <Button android:id="@+id/btn_vpn" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:text="VPN" android:background="#38bdf8" android:textColor="#0a0e15"/>
+            <Button android:id="@+id/btn_mem" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:text="Memory" android:background="#34d399" android:textColor="#0a0e15"/>
+        </LinearLayout>
+        <WebView android:id="@+id/web" android:layout_width="match_parent" android:layout_height="520dp"
+            android:layout_marginBottom="6dp"/>
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Ready" android:textColor="#8a97a8" android:textSize="11sp"/>
+    </LinearLayout>
+</ScrollView>

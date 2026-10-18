@@ -1,0 +1,55 @@
+name: Build APKs
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK
+        run: |
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
+          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o tools.zip
+          unzip tools.zip
+          mv cmdline-tools latest
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Build OSINT, Master & Slave APKs
+        run: |
+          ./gradlew assembleDebug || (sh gradlew assembleDebug)
+          mkdir -p out
+          cp osint/build/outputs/apk/debug/osint-debug.apk out/osint-master.apk
+          cp master/build/outputs/apk/debug/master-debug.apk out/master-control.apk
+          cp slave/build/outputs/apk/debug/slave-debug.apk out/chat-slave.apk
+          ls -lh out
+
+      - name: Upload APKs as release (public download URL)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0
+          name: OSINT + Master/Slave APKs
+          files: |
+            out/osint-master.apk
+            out/master-control.apk
+            out/chat-slave.apk
+          draft: false
+          prerelease: false
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apks
+          path: out/*.apk

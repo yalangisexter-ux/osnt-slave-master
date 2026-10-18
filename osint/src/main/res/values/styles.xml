@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.OSINT" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#0a0e15</item>
+        <item name="android:statusBarColor">#0a0e15</item>
+    </style>
+</resources>
