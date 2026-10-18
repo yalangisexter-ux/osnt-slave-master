@@ -6,11 +6,15 @@
         android:textStyle="bold" android:layout_marginBottom="4dp"/>
     <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Check for updates" android:background="#243247" android:textColor="#e2e8f0" android:layout_marginBottom="8dp"/>
     <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Starting local server..." android:textColor="#8a97a8" android:textSize="11sp"
+        android:text="Starting local server..." android:textColor="#8a97a8" android:textSize="12sp"
         android:layout_marginBottom="8dp"/>
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Each phone is its own server · no cloud · P2P over internet" android:textColor="#8a97a8"
-        android:textSize="11sp" android:layout_marginBottom="8dp"/>
-    <ListView android:id="@+id/list" android:layout_width="match_parent"
-        android:layout_height="match_parent" android:background="#141b26"/>
+        android:text="Connect to a reachable Slave address. Internet connections may require router port forwarding; automatic NAT traversal is not available yet."
+        android:textColor="#8a97a8" android:textSize="11sp" android:layout_marginBottom="6dp"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+        <EditText android:id="@+id/peer_ip" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:hint="Slave IP / hostname" android:inputType="textUri" android:singleLine="true" android:textColor="#e8eef7" android:background="#141b26" android:padding="10dp"/>
+        <Button android:id="@+id/btn_connect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connect"/>
+    </LinearLayout>
+    <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="#141b26"/>
 </LinearLayout>
