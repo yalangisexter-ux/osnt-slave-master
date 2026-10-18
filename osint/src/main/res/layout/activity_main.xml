@@ -4,10 +4,10 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:padding="14dp">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="OSINT Master" android:textColor="#ec4899" android:textSize="22sp"
+            android:text="OSINT MASTER" android:textColor="#f8fafc" android:textSize="26sp"
             android:textStyle="bold" android:layout_marginBottom="6dp"/>
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Deep search · Tor · VPN · Dark web · Memory" android:textColor="#8a97a8" android:textSize="12sp"
+            android:text="INTELLIGENCE SEARCH WORKSPACE" android:textColor="#94a3b8" android:textSize="12sp"
             android:layout_marginBottom="10dp"/>
         <EditText android:id="@+id/in_phone" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:hint="Phone number" android:inputType="phone" android:background="#141b26"
@@ -33,6 +33,7 @@
         <Spinner android:id="@+id/mode" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:background="#141b26" android:layout_marginBottom="10dp"
             android:entries="@array/modes"/>
+        <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Check for updates" android:background="#243247" android:textColor="#e2e8f0" android:layout_marginBottom="8dp"/>
         <Button android:id="@+id/btn_search" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:text="Deep Search" android:background="#ec4899" android:textColor="#fff"
             android:layout_marginBottom="8dp"/>
