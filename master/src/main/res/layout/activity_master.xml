@@ -2,8 +2,9 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:background="#0a0e15" android:padding="10dp">
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Master Control" android:textColor="#f59e0b" android:textSize="20sp"
+        android:text="MASTER CONTROL" android:textColor="#f8fafc" android:textSize="25sp"
         android:textStyle="bold" android:layout_marginBottom="4dp"/>
+    <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Check for updates" android:background="#243247" android:textColor="#e2e8f0" android:layout_marginBottom="8dp"/>
     <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:text="Starting local server..." android:textColor="#8a97a8" android:textSize="11sp"
         android:layout_marginBottom="8dp"/>
