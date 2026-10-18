@@ -43,8 +43,8 @@ public class MainActivity extends AppCompatActivity {
                 serverSocket = new ServerSocket(9877);
                 status("Master listening on port 9877");
                 while (running) {
-                    Socket s = serverSocket.accept();
-                    pool.execute(() -> handleSlave(s));
+                    Socket client = serverSocket.accept();
+                    pool.execute(() -> handleSlave(client));
                 }
             } catch (Exception e) { status("Error: " + e.getMessage()); }
         });
@@ -54,10 +54,10 @@ public class MainActivity extends AppCompatActivity {
             while (running) {
                 try {
                     String slaveIp = getSharedPreferences("master", 0).getString("slave_ip", "127.0.0.1");
-                    Socket s = new Socket(slaveIp, 9876);
+                    Socket slaveSocket = new Socket(slaveIp, 9876);
                     events.add("Connected to slave");
                     h.post(() -> { ArrayAdapter<String> a2 = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, events); list.setAdapter(a2); });
-                    s.close();
+                    slaveSocket.close();
                 } catch (Exception e) {
                     // Slave not reachable yet — keep trying every 5s
                     try { Thread.sleep(5000); } catch (Exception ex) {}
