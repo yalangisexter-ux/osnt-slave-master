@@ -31,6 +31,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle s) {
         super.onCreate(s);
         setContentView(R.layout.activity_slave);
+        findViewById(R.id.btn_update).setOnClickListener(v -> {
+            try {
+                startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest")));
+                status.setText("Opened latest release page");
+            } catch (Exception e) {
+                status.setText("Unable to open release page");
+            }
+        });
         list = findViewById(R.id.list);
         input = findViewById(R.id.input);
         status = findViewById(R.id.status);
