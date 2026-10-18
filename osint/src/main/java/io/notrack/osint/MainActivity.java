@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
         web.getSettings().setDomStorageEnabled(true);
         web.loadUrl("https://www.google.com");
 
+        findViewById(R.id.btn_update).setOnClickListener(v -> openUpdates());
         findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
         findViewById(R.id.btn_web).setOnClickListener(v -> browse("https://www.google.com"));
         findViewById(R.id.btn_dark).setOnClickListener(v -> browse("https://www.torproject.org"));
@@ -152,6 +153,16 @@ public class MainActivity extends AppCompatActivity {
             "Current page: " + web.getUrl() + "\n\n" +
             "This screen does not persist search history.";
         Toast.makeText(this, mem, Toast.LENGTH_LONG).show();
+    }
+
+    private void openUpdates() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest"));
+            startActivity(intent);
+            status.setText("Opened latest release page");
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to open release page", Toast.LENGTH_LONG).show();
+        }
     }
 
     private String enc(String s) {
