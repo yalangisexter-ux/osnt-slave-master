@@ -1,16 +1,11 @@
 package io.notrack.osint;
 
-import android.app.Activity;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,8 +15,6 @@ import java.net.Proxy;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     private EditText inPhone, inEmail, inUser, inDomain, inIp, inUrl;
@@ -29,7 +22,6 @@ public class MainActivity extends AppCompatActivity {
     private WebView web;
     private TextView status;
     private OkHttpClient torClient, vpnClient, normalClient;
-    private String torUrl, vpnUrl;
 
     @Override
     protected void onCreate(Bundle s) {
@@ -60,7 +52,6 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
         findViewById(R.id.btn_web).setOnClickListener(v -> browse("https://www.google.com"));
         findViewById(R.id.btn_dark).setOnClickListener(v -> browse("https://www.torproject.org"));
-        findViewById(R.id.btn_clear).setOnClickListener(v -> browse("about:blank"));
         findViewById(R.id.btn_tor).setOnClickListener(v -> toggleTor());
         findViewById(R.id.btn_vpn).setOnClickListener(v -> toggleVpn());
         findViewById(R.id.btn_mem).setOnClickListener(v -> showMemory());
