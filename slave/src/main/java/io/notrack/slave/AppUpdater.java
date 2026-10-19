@@ -59,8 +59,8 @@ final class AppUpdater {
                     if (!dir.exists() && !dir.mkdirs()) throw new Exception("Cannot create update folder");
                     File apk = new File(dir, apkName);
                     try (InputStream input = d.getInputStream(); FileOutputStream output = new FileOutputStream(apk)) {
-                        byte[] b = new byte[16384]; int n;
-                        while ((n = input.read(b)) != -1) output.write(b, 0, n);
+                        byte[] downloadBuffer = new byte[16384]; int bytesRead;
+                        while ((bytesRead = input.read(downloadBuffer)) != -1) output.write(downloadBuffer, 0, bytesRead);
                         output.getFD().sync();
                     } finally { d.disconnect(); }
                     MAIN.post(() -> {
