@@ -40,6 +40,12 @@
             <Button android:id="@+id/btn_search" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="Search public sources" android:backgroundTint="#2563EB" android:textColor="#FFFFFF"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btn_back" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="Back" android:backgroundTint="#334155" android:textColor="#FFFFFF"/>
+                <Button android:id="@+id/btn_clear" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="Clear fields" android:backgroundTint="#334155" android:textColor="#FFFFFF"/>
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                 <Button android:id="@+id/btn_web" android:layout_width="0dp" android:layout_weight="1"
                     android:layout_height="wrap_content" android:text="Web" android:backgroundTint="#0F766E" android:textColor="#FFFFFF"/>
                 <Button android:id="@+id/btn_dark" android:layout_width="0dp" android:layout_weight="1"
