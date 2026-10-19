@@ -12,6 +12,7 @@ import android.net.NetworkCapabilities;
 import android.os.Handler;
 import android.os.Looper;
 import org.json.JSONObject;
+import org.torproject.jni.TorService;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.InetSocketAddress;
