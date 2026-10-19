@@ -49,6 +49,12 @@ public class MainActivity extends AppCompatActivity {
     private String pendingTorUrl = "https://check.torproject.org/";
     private static final int TOR_SOCKS_PORT = 9050;
     private static final int VPN_CONFIG_REQUEST = 4012;
+    private static final String[] SOCIAL_OPTIONS = {"Instagram", "Facebook", "Twitter / X", "TikTok", "YouTube", "Reddit", "LinkedIn"};
+    private static final String[] SOCIAL_DOMAINS = {"instagram.com", "facebook.com", "x.com", "tiktok.com", "youtube.com", "reddit.com", "linkedin.com"};
+    private static final String[] CONTENT_OPTIONS = {"PDF files", "Word documents", "Excel spreadsheets", "PowerPoint files", "Public profiles"};
+    private static final String[] CONTENT_OPERATORS = {"filetype:pdf", "(filetype:doc OR filetype:docx)", "(filetype:xls OR filetype:xlsx)", "(filetype:ppt OR filetype:pptx)", "(site:instagram.com OR site:facebook.com OR site:x.com OR site:linkedin.com)"};
+    private boolean[] selectedSocial = new boolean[SOCIAL_OPTIONS.length];
+    private boolean[] selectedContent = new boolean[CONTENT_OPTIONS.length];
 
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
@@ -57,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         inDomain = findViewById(R.id.in_domain); inUrl = findViewById(R.id.in_url);
         engine = findViewById(R.id.engine); mode = findViewById(R.id.mode); dorkTemplate = findViewById(R.id.dork_template);
         web = findViewById(R.id.web); status = findViewById(R.id.status);
+        restoreSelections();
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 Uri uri = r.getUrl();
@@ -98,6 +105,8 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_tor).setOnClickListener(v -> startTorAndBrowse("https://check.torproject.org/"));
         findViewById(R.id.btn_vpn).setOnClickListener(v -> chooseVpnConfig());
         findViewById(R.id.btn_mem).setOnClickListener(v -> { showMemory(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_platforms).setOnClickListener(v -> showMultiSelect(SOCIAL_OPTIONS, selectedSocial, "Choose social platforms", "social_selection"));
+        findViewById(R.id.btn_content).setOnClickListener(v -> showMultiSelect(CONTENT_OPTIONS, selectedContent, "Choose content types", "content_selection"));
         findViewById(R.id.btn_dork).setOnClickListener(v -> { doDorkSearch(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
         findViewById(R.id.btn_web).setOnClickListener(v -> { browse("https://www.google.com"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
         findViewById(R.id.btn_dark).setOnClickListener(v -> { openDarkWeb(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
@@ -124,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
         torStarting = true;
         status.setText("Starting the built-in Tor service…");
         try {
+            startService(new Intent(this, TorService.class).setAction(TorService.ACTION_START));
             torBound = bindService(new Intent(this, TorService.class), torConnection, BIND_AUTO_CREATE);
             if (!torBound) {
                 torStarting = false;
@@ -184,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void openDarkWeb() {
         String candidate = inUrl.getText().toString().trim();
+        if (!candidate.isEmpty() && !candidate.contains("://")) candidate = "http://" + candidate;
         if (candidate.matches("(?i)^https?://[^/]+\\.onion(?:/.*)?$")) {
             startTorAndBrowse(candidate);
         } else {
@@ -357,8 +368,74 @@ public class MainActivity extends AppCompatActivity {
         String domain = inDomain.getText().toString().trim();
         String url = inUrl.getText().toString().trim();
         if (!domain.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(domain); }
-        if (!url.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(url); }
+        if (!url.isEmpty() && !url.toLowerCase(java.util.Locale.ROOT).contains(".onion")) { if (out.length() > 0) out.append(' '); out.append(url); }
+        String sites = selectedSiteOperator();
+        String content = selectedContentOperator();
+        if (!sites.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(sites); }
+        if (!content.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(content); }
         return out.toString().trim();
+    }
+
+    private void showMultiSelect(String[] options, boolean[] selected, String title, String preferenceKey) {
+        boolean[] checked = selected.clone();
+        new AlertDialog.Builder(this).setTitle(title)
+            .setMultiChoiceItems(options, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
+            .setNeutralButton("Clear", (dialog, which) -> {
+                java.util.Arrays.fill(selected, false);
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(preferenceKey).apply();
+                status.setText(title + ": cleared");
+            })
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Apply", (dialog, which) -> {
+                System.arraycopy(checked, 0, selected, 0, selected.length);
+                StringBuilder saved = new StringBuilder();
+                for (int i = 0; i < selected.length; i++) if (selected[i]) {
+                    if (saved.length() > 0) saved.append(',');
+                    saved.append(i);
+                }
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(preferenceKey, saved.toString()).apply();
+                status.setText(title + ": " + countSelected(selected) + " selected");
+            }).show();
+    }
+
+    private int countSelected(boolean[] values) {
+        int count = 0;
+        for (boolean value : values) if (value) count++;
+        return count;
+    }
+
+    private String selectedSiteOperator() {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < selectedSocial.length; i++) if (selectedSocial[i]) {
+            if (result.length() == 0) result.append("( ");
+            else result.append(" OR ");
+            result.append("site:").append(SOCIAL_DOMAINS[i]);
+        }
+        if (result.length() > 0) result.append(" )");
+        return result.toString();
+    }
+
+    private String selectedContentOperator() {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < selectedContent.length; i++) if (selectedContent[i]) {
+            if (result.length() > 0) result.append(' ');
+            result.append(CONTENT_OPERATORS[i]);
+        }
+        return result.toString();
+    }
+
+    private void restoreSelections() {
+        restoreSelection("social_selection", selectedSocial);
+        restoreSelection("content_selection", selectedContent);
+    }
+
+    private void restoreSelection(String key, boolean[] target) {
+        String value = getSharedPreferences(PREFS, MODE_PRIVATE).getString(key, "");
+        if (value.isEmpty()) return;
+        for (String item : value.split(",")) {
+            try { int index = Integer.parseInt(item); if (index >= 0 && index < target.length) target[index] = true; }
+            catch (NumberFormatException ignored) { }
+        }
     }
 
     private void doSearch() {
@@ -437,6 +514,10 @@ public class MainActivity extends AppCompatActivity {
                 dork = terms;
                 break;
         }
+        String sites = selectedSiteOperator();
+        String content = selectedContentOperator();
+        if (!sites.isEmpty()) dork += " " + sites;
+        if (!content.isEmpty()) dork += " " + content;
         String url = "https://www.google.com/search?q=" + enc(dork);
         remember("Google Dork [" + template + "]: " + dork);
         if ("Tor".equals(String.valueOf(mode.getSelectedItem()))) {
