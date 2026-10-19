@@ -51,8 +51,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int VPN_CONFIG_REQUEST = 4012;
     private static final String[] SOCIAL_OPTIONS = {"Instagram", "Facebook", "Twitter / X", "TikTok", "YouTube", "Reddit", "LinkedIn"};
     private static final String[] SOCIAL_DOMAINS = {"instagram.com", "facebook.com", "x.com", "tiktok.com", "youtube.com", "reddit.com", "linkedin.com"};
-    private static final String[] CONTENT_OPTIONS = {"PDF files", "Word documents", "Excel spreadsheets", "PowerPoint files", "Public profiles"};
-    private static final String[] CONTENT_OPERATORS = {"filetype:pdf", "(filetype:doc OR filetype:docx)", "(filetype:xls OR filetype:xlsx)", "(filetype:ppt OR filetype:pptx)", "(site:instagram.com OR site:facebook.com OR site:x.com OR site:linkedin.com)"};
+    private static final String[] CONTENT_OPTIONS = {"PDF files", "Word documents", "Excel spreadsheets", "PowerPoint files", "Images", "Videos", "News", "Public profiles"};
+    private static final String[] CONTENT_OPERATORS = {"filetype:pdf", "(filetype:doc OR filetype:docx)", "(filetype:xls OR filetype:xlsx)", "(filetype:ppt OR filetype:pptx)", "(filetype:jpg OR filetype:jpeg OR filetype:png OR filetype:gif)", "(filetype:mp4 OR filetype:mov OR filetype:webm)", "(site:news.google.com OR site:reuters.com OR site:apnews.com)", "(site:instagram.com OR site:facebook.com OR site:x.com OR site:linkedin.com)"};
     private boolean[] selectedSocial = new boolean[SOCIAL_OPTIONS.length];
     private boolean[] selectedContent = new boolean[CONTENT_OPTIONS.length];
 
@@ -105,8 +105,8 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_tor).setOnClickListener(v -> startTorAndBrowse("https://check.torproject.org/"));
         findViewById(R.id.btn_vpn).setOnClickListener(v -> chooseVpnConfig());
         findViewById(R.id.btn_mem).setOnClickListener(v -> { showMemory(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_platforms).setOnClickListener(v -> showMultiSelect(SOCIAL_OPTIONS, selectedSocial, "Choose social platforms", "social_selection"));
-        findViewById(R.id.btn_content).setOnClickListener(v -> showMultiSelect(CONTENT_OPTIONS, selectedContent, "Choose content types", "content_selection"));
+        findViewById(R.id.btn_platforms).setOnClickListener(v -> { showMultiSelect(SOCIAL_OPTIONS, selectedSocial, "Choose social platforms", "social_selection"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_content).setOnClickListener(v -> { showMultiSelect(CONTENT_OPTIONS, selectedContent, "Choose content types", "content_selection"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
         findViewById(R.id.btn_dork).setOnClickListener(v -> { doDorkSearch(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
         findViewById(R.id.btn_web).setOnClickListener(v -> { browse("https://www.google.com"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
         findViewById(R.id.btn_dark).setOnClickListener(v -> { openDarkWeb(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
@@ -514,10 +514,6 @@ public class MainActivity extends AppCompatActivity {
                 dork = terms;
                 break;
         }
-        String sites = selectedSiteOperator();
-        String content = selectedContentOperator();
-        if (!sites.isEmpty()) dork += " " + sites;
-        if (!content.isEmpty()) dork += " " + content;
         String url = "https://www.google.com/search?q=" + enc(dork);
         remember("Google Dork [" + template + "]: " + dork);
         if ("Tor".equals(String.valueOf(mode.getSelectedItem()))) {
