@@ -1,6 +1,10 @@
 package io.notrack.osint;
 
 import android.content.Intent;
+import android.content.ComponentName;
+import android.content.ServiceConnection;
+import android.os.IBinder;
+import android.webkit.WebResourceResponse;
 import android.net.Uri;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -10,6 +14,13 @@ import android.os.Looper;
 import org.json.JSONObject;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.Socket;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.app.AlertDialog;
@@ -30,6 +41,13 @@ public class MainActivity extends AppCompatActivity {
     private TextView status;
     private static final String PREFS = "osint_memory";
     private static final String HISTORY = "search_history";
+    private volatile boolean torActive = false;
+    private volatile boolean torStarting = false;
+    private boolean torBound = false;
+    private boolean torModeEnabled = false;
+    private String pendingTorUrl = "https://check.torproject.org/";
+    private static final int TOR_SOCKS_PORT = 9050;
+    private static final int VPN_CONFIG_REQUEST = 4012;
 
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
@@ -40,8 +58,22 @@ public class MainActivity extends AppCompatActivity {
         engine = findViewById(R.id.engine); mode = findViewById(R.id.mode);
         web = findViewById(R.id.web); status = findViewById(R.id.status);
         web.setWebViewClient(new WebViewClient() {
-            @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return route(r.getUrl()); }
+            @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                Uri uri = r.getUrl();
+                if (torModeEnabled && "http".equalsIgnoreCase(uri.getScheme()) && !isLocalHost(uri.getHost())) {
+                    status.setText("Tor mode blocks insecure HTTP navigation; use HTTPS where available.");
+                }
+                return route(uri);
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView v, String u) { return route(Uri.parse(u)); }
+            @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+                if (!torModeEnabled) return super.shouldInterceptRequest(v, r);
+                return fetchThroughTor(r.getUrl().toString(), r.getMethod(), r.getRequestHeaders());
+            }
+            @Override public WebResourceResponse shouldInterceptRequest(WebView v, String url) {
+                if (!torModeEnabled) return super.shouldInterceptRequest(v, url);
+                return fetchThroughTor(url, "GET", java.util.Collections.emptyMap());
+            }
         });
         web.setWebChromeClient(new WebChromeClient());
         web.getSettings().setJavaScriptEnabled(true);
@@ -61,27 +93,199 @@ public class MainActivity extends AppCompatActivity {
             status.setText("Search fields cleared");
         });
         findViewById(R.id.btn_web).setOnClickListener(v -> browse("https://www.google.com"));
-        findViewById(R.id.btn_dark).setOnClickListener(v -> openTorBrowser("https://check.torproject.org/"));
-        findViewById(R.id.btn_tor).setOnClickListener(v -> openTorBrowser("https://www.torproject.org/download/"));
-        findViewById(R.id.btn_vpn).setOnClickListener(v -> openVpnSettings());
+        findViewById(R.id.btn_dark).setOnClickListener(v -> openDarkWeb());
+        findViewById(R.id.btn_tor).setOnClickListener(v -> startTorAndBrowse("https://check.torproject.org/"));
+        findViewById(R.id.btn_vpn).setOnClickListener(v -> chooseVpnConfig());
         findViewById(R.id.btn_mem).setOnClickListener(v -> showMemory());
     }
 
 
-    private void openTorBrowser(String url) {
+    private void startTorAndBrowse(String url) {
+        pendingTorUrl = url;
+        torModeEnabled = true;
+        if (torActive) {
+            web.loadUrl(url);
+            status.setText("In-app Tor browser active. Verify connection at check.torproject.org.");
+            return;
+        }
+        if (torStarting) {
+            status.setText("Tor is starting; please wait…");
+            return;
+        }
+        torStarting = true;
+        status.setText("Starting the built-in Tor service…");
         try {
-            Intent tor = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            tor.setPackage("org.torproject.torbrowser");
-            startActivity(tor);
-            status.setText("Opened in Tor Browser. Confirm Tor is connected before entering sensitive information.");
-        } catch (Exception e) {
-            try {
-                Intent browser = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.torproject.org/download/"));
-                startActivity(browser);
-                status.setText("Tor Browser is not detected. Install it, connect to Tor, then retry.");
-            } catch (Exception ignored) {
-                status.setText("No browser available. Install Tor Browser from the official Tor Project.");
+            torBound = bindService(new Intent(this, TorService.class), torConnection, BIND_AUTO_CREATE);
+            if (!torBound) {
+                torStarting = false;
+                torModeEnabled = false;
+                status.setText("Could not bind the built-in Tor service.");
             }
+        } catch (Exception e) {
+            torStarting = false;
+            torModeEnabled = false;
+            status.setText("Unable to start Tor service: " + e.getClass().getSimpleName());
+        }
+    }
+
+    private final ServiceConnection torConnection = new ServiceConnection() {
+        @Override public void onServiceConnected(ComponentName name, IBinder binder) {
+            new Thread(() -> {
+                long deadline = System.currentTimeMillis() + 60000L;
+                boolean ready = false;
+                while (System.currentTimeMillis() < deadline && !isFinishing()) {
+                    try (Socket socket = new Socket()) {
+                        socket.connect(new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT), 700);
+                        ready = true;
+                        break;
+                    } catch (Exception ignored) {
+                        try { Thread.sleep(500); } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    }
+                }
+                final boolean connected = ready;
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    torStarting = false;
+                    torActive = connected;
+                    if (connected) {
+                        status.setText("Tor SOCKS proxy ready. Loading through Tor…");
+                        web.loadUrl(pendingTorUrl);
+                    } else {
+                        torModeEnabled = false;
+                        status.setText("Tor did not start. Direct-network fallback was blocked. Retry or use Tor Browser.");
+                        Toast.makeText(MainActivity.this, "Could not start Tor", Toast.LENGTH_LONG).show();
+                    }
+                });
+            }).start();
+        }
+        @Override public void onServiceDisconnected(ComponentName name) {
+            torActive = false;
+            torModeEnabled = false;
+            status.setText("Tor service disconnected; Tor browsing stopped.");
+        }
+    };
+
+    private void openDarkWeb() {
+        String candidate = inUrl.getText().toString().trim();
+        if (candidate.matches("(?i)^https?://[^/]+\\.onion(?:/.*)?$")) {
+            startTorAndBrowse(candidate);
+        } else {
+            new AlertDialog.Builder(this)
+                .setTitle("In-app Tor browser")
+                .setMessage("Enter a full .onion URL in the URL field to open it through Tor, or start with the Tor connectivity check.")
+                .setPositiveButton("Start Tor", (d, w) -> startTorAndBrowse("https://check.torproject.org/"))
+                .setNegativeButton("Cancel", null).show();
+        }
+    }
+
+    private boolean isLocalHost(String host) {
+        return host == null || host.equalsIgnoreCase("localhost") || host.equals("127.0.0.1") || host.equals("::1");
+    }
+
+    private WebResourceResponse fetchThroughTor(String url, String method, Map<String, String> headers) {
+        if (!torActive) return errorResponse(503, "Tor is not connected. Request blocked to prevent direct-network leakage.");
+        HttpURLConnection connection = null;
+        try {
+            String scheme = Uri.parse(url).getScheme();
+            if (!("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
+                return errorResponse(403, "Only HTTP and HTTPS are allowed in Tor mode.");
+            }
+            if (!"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)) {
+                return errorResponse(405, "Tor browser currently supports GET/HEAD requests only.");
+            }
+            Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT));
+            connection = (HttpURLConnection) new URL(url).openConnection(proxy);
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(20000);
+            connection.setInstanceFollowRedirects(true);
+            connection.setRequestMethod(method);
+            for (Map.Entry<String, String> header : headers.entrySet()) {
+                String key = header.getKey();
+                if (key != null && !key.equalsIgnoreCase("Host") && !key.equalsIgnoreCase("Connection")) {
+                    connection.setRequestProperty(key, header.getValue());
+                }
+            }
+            int code = connection.getResponseCode();
+            InputStream stream = code >= 400 ? connection.getErrorStream() : connection.getInputStream();
+            if (stream == null) stream = new ByteArrayInputStream(new byte[0]);
+            String contentType = connection.getContentType();
+            String mime = "text/plain";
+            String encoding = "UTF-8";
+            if (contentType != null) {
+                String[] parts = contentType.split(";");
+                mime = parts[0].trim();
+                for (String part : parts) {
+                    String p = part.trim();
+                    if (p.toLowerCase(java.util.Locale.ROOT).startsWith("charset=")) encoding = p.substring(8).replace("\"", "");
+                }
+            }
+            Map<String, String> responseHeaders = new HashMap<>();
+            for (Map.Entry<String, java.util.List<String>> entry : connection.getHeaderFields().entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null && !entry.getValue().isEmpty()) {
+                    responseHeaders.put(entry.getKey(), String.join(", ", entry.getValue()));
+                }
+            }
+            return new WebResourceResponse(mime, encoding, code, connection.getResponseMessage(), responseHeaders, stream);
+        } catch (Exception e) {
+            return errorResponse(502, "Tor request failed: " + e.getClass().getSimpleName());
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    private WebResourceResponse errorResponse(int code, String message) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Cache-Control", "no-store");
+        String reason = code == 503 ? "Tor Unavailable" : (code == 403 ? "Blocked" : "Request Failed");
+        return new WebResourceResponse("text/plain", "UTF-8", code, reason, headers,
+            new ByteArrayInputStream(message.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
+    private void chooseVpnConfig() {
+        new AlertDialog.Builder(this)
+            .setTitle("VPN configuration")
+            .setMessage("Import a WireGuard .conf file to open it in the official WireGuard app. A valid configuration from your VPN provider is required; this app does not operate a VPN server.")
+            .setPositiveButton("Import .conf", (d, w) -> {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType("*/*");
+                startActivityForResult(pick, VPN_CONFIG_REQUEST);
+            })
+            .setNeutralButton("Android VPN settings", (d, w) -> openVpnSettings())
+            .setNegativeButton("Cancel", null).show();
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != VPN_CONFIG_REQUEST || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        Uri configUri = data.getData();
+        try {
+            String config;
+            try (InputStream input = getContentResolver().openInputStream(configUri);
+                 java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream()) {
+                if (input == null) throw new java.io.IOException("Unable to read selected file");
+                byte[] buffer = new byte[4096];
+                int count;
+                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+                config = output.toString("UTF-8");
+            }
+            if (!config.contains("[Interface]") || !config.contains("[Peer]")) {
+                status.setText("Selected file is not a WireGuard .conf file.");
+                return;
+            }
+            Intent open = new Intent(Intent.ACTION_VIEW);
+            open.setDataAndType(configUri, "application/x-wireguard-profile");
+            open.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(open, "Import into WireGuard"));
+            status.setText("Configuration sent to WireGuard. Review it and explicitly activate the tunnel there.");
+        } catch (Exception e) {
+            status.setText("WireGuard is not installed or could not open the configuration.");
+            new AlertDialog.Builder(this).setTitle("WireGuard required")
+                .setMessage("Install the official WireGuard app, then import your VPN provider's configuration.")
+                .setPositiveButton("Open WireGuard website", (d, w) -> openExternal("https://www.wireguard.com/install/", "Opened WireGuard installation page"))
+                .setNegativeButton("Close", null).show();
         }
     }
 
@@ -198,10 +402,11 @@ public class MainActivity extends AppCompatActivity {
         }
         remember(selectedEngine + " [" + selectedMode + "]: " + q);
         if ("Tor".equals(selectedMode)) {
-            openExternal(url, "Choose Tor Browser or a browser configured for Tor. This app cannot enable Tor routing itself.");
+            startTorAndBrowse(url);
         } else if ("Dark web".equals(selectedMode)) {
-            browse("https://www.torproject.org/");
-            status.setText("Tor Project opened. .onion addresses require Tor Browser or a configured Tor connection.");
+            String onionUrl = inUrl.getText().toString().trim();
+            if (onionUrl.matches("(?i)^https?://[^/]+\\.onion(?:/.*)?$")) startTorAndBrowse(onionUrl);
+            else openDarkWeb();
         } else {
             browse(url);
             status.setText("Searching " + selectedEngine + " (" + selectedMode + ")");
@@ -257,6 +462,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
+        if (torBound) { try { unbindService(torConnection); } catch (Exception ignored) { } }
         if (web != null) web.destroy();
         super.onDestroy();
     }
