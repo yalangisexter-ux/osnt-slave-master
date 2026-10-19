@@ -1,70 +1,42 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="#080D18" android:padding="12dp">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="OSINT WORKSPACE" android:textColor="#F8FAFC" android:textSize="24sp"
-        android:textStyle="bold" android:letterSpacing="0.04"/>
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Search public sources · Organize your research" android:textColor="#94A3B8"
-        android:textSize="12sp" android:layout_marginBottom="8dp"/>
-    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-        android:fillViewport="false" android:clipToPadding="false">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:paddingBottom="8dp">
-            <EditText android:id="@+id/in_phone" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="Phone number" android:inputType="phone" android:singleLine="true"
-                android:backgroundTint="#475569" android:textColor="#F8FAFC" android:textColorHint="#94A3B8" android:padding="10dp"/>
-            <EditText android:id="@+id/in_email" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="Email address" android:inputType="textEmailAddress" android:singleLine="true"
-                android:backgroundTint="#475569" android:textColor="#F8FAFC" android:textColorHint="#94A3B8" android:padding="10dp"/>
-            <EditText android:id="@+id/in_user" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="Username / handle" android:singleLine="true" android:backgroundTint="#475569"
-                android:textColor="#F8FAFC" android:textColorHint="#94A3B8" android:padding="10dp"/>
-            <EditText android:id="@+id/in_domain" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="Domain" android:singleLine="true" android:backgroundTint="#475569"
-                android:textColor="#F8FAFC" android:textColorHint="#94A3B8" android:padding="10dp"/>
-            <EditText android:id="@+id/in_ip" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="IP address" android:singleLine="true" android:backgroundTint="#475569"
-                android:textColor="#F8FAFC" android:textColorHint="#94A3B8" android:padding="10dp"/>
-            <EditText android:id="@+id/in_url" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="URL / additional terms" android:inputType="textUri" android:singleLine="true"
-                android:backgroundTint="#475569" android:textColor="#F8FAFC" android:textColorHint="#94A3B8" android:padding="10dp"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="SEARCH SOURCE" android:textColor="#CBD5E1" android:textStyle="bold" android:textSize="11sp"/>
-            <Spinner android:id="@+id/engine" android:layout_width="match_parent" android:layout_height="48dp"
-                android:entries="@array/engines" android:layout_marginBottom="4dp"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="CONNECTION MODE" android:textColor="#CBD5E1" android:textStyle="bold" android:textSize="11sp"/>
-            <Spinner android:id="@+id/mode" android:layout_width="match_parent" android:layout_height="48dp"
-                android:entries="@array/modes" android:layout_marginBottom="4dp"/>
-            <Button android:id="@+id/btn_search" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Search public sources" android:backgroundTint="#2563EB" android:textColor="#FFFFFF"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btn_back" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="Back" android:backgroundTint="#334155" android:textColor="#FFFFFF"/>
-                <Button android:id="@+id/btn_clear" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="Clear fields" android:backgroundTint="#334155" android:textColor="#FFFFFF"/>
-            </LinearLayout>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btn_web" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="Web" android:backgroundTint="#0F766E" android:textColor="#FFFFFF"/>
-                <Button android:id="@+id/btn_dark" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="Tor Project" android:backgroundTint="#6D28D9" android:textColor="#FFFFFF"/>
-            </LinearLayout>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btn_tor" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="Tor setup" android:backgroundTint="#B45309" android:textColor="#FFFFFF"/>
-                <Button android:id="@+id/btn_vpn" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="VPN settings" android:backgroundTint="#0369A1" android:textColor="#FFFFFF"/>
-                <Button android:id="@+id/btn_mem" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="Memory" android:backgroundTint="#047857" android:textColor="#FFFFFF"/>
-            </LinearLayout>
-            <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Check for updates" android:backgroundTint="#1E293B" android:textColor="#E2E8F0"/>
+    android:orientation="vertical" android:background="#0B1020" android:padding="16dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingBottom="14dp">
+        <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_osint" android:contentDescription="OSINT icon" android:layout_marginEnd="12dp"/>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="OSINT WORKSPACE" android:textColor="#F8FAFC" android:textSize="21sp" android:textStyle="bold" android:letterSpacing="0.025"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Public-source research · Browser tools" android:textColor="#9AA8C2" android:textSize="12sp"/>
+        </LinearLayout>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LIVE" android:textColor="#67E8F9" android:textSize="11sp" android:textStyle="bold" android:background="@drawable/bg_status_pill" android:paddingHorizontal="10dp" android:paddingVertical="6dp"/>
+    </LinearLayout>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="RESEARCH TARGET" android:textColor="#C4D0E5" android:textStyle="bold" android:textSize="12sp" android:layout_marginBottom="8dp"/>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="false" android:clipToPadding="false">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_surface_card" android:padding="14dp">
+            <EditText android:id="@+id/in_phone" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Phone number" android:inputType="phone" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
+            <EditText android:id="@+id/in_email" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Email address" android:inputType="textEmailAddress" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
+            <EditText android:id="@+id/in_user" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Username / handle" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
+            <EditText android:id="@+id/in_domain" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Domain" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
+            <EditText android:id="@+id/in_ip" android:layout_width="match_parent" android:layout_height="48dp" android:hint="IP address" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
+            <EditText android:id="@+id/in_url" android:layout_width="match_parent" android:layout_height="48dp" android:hint="URL / additional terms" android:inputType="textUri" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="12dp"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SEARCH ENGINE" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginBottom="2dp"/>
+            <Spinner android:id="@+id/engine" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/engines" android:backgroundTint="#40506C" android:layout_marginBottom="8dp"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="CONNECTION MODE" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginBottom="2dp"/>
+            <Spinner android:id="@+id/mode" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/modes" android:backgroundTint="#40506C" android:layout_marginBottom="12dp"/>
+            <Button android:id="@+id/btn_search" android:layout_width="match_parent" android:layout_height="52dp" android:text="⌕   Search public sources" android:textAllCaps="false" android:textStyle="bold" android:background="@drawable/bg_primary_button" android:textColor="#06101C"/>
+            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none" android:layout_marginTop="10dp">
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btn_back" android:layout_width="wrap_content" android:layout_height="44dp" android:text="‹  Back" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="8dp"/>
+                    <Button android:id="@+id/btn_clear" android:layout_width="wrap_content" android:layout_height="44dp" android:text="Clear fields" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="8dp"/>
+                    <Button android:id="@+id/btn_web" android:layout_width="wrap_content" android:layout_height="44dp" android:text="Web browser" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="8dp"/>
+                    <Button android:id="@+id/btn_dark" android:layout_width="wrap_content" android:layout_height="44dp" android:text="Onion address" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="8dp"/>
+                    <Button android:id="@+id/btn_tor" android:layout_width="wrap_content" android:layout_height="44dp" android:text="Start Tor" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="8dp"/>
+                    <Button android:id="@+id/btn_vpn" android:layout_width="wrap_content" android:layout_height="44dp" android:text="VPN settings" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="8dp"/>
+                    <Button android:id="@+id/btn_mem" android:layout_width="wrap_content" android:layout_height="44dp" android:text="Saved searches" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA"/>
+                </LinearLayout>
+            </HorizontalScrollView>
+            <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="48dp" android:text="Check for updates" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF" android:layout_marginTop="10dp"/>
         </LinearLayout>
     </ScrollView>
-    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Ready" android:textColor="#93C5FD" android:textSize="12sp" android:padding="6dp" android:maxLines="2"/>
-    <WebView android:id="@+id/web" android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:background="#FFFFFF"/>
+    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Ready" android:textColor="#8BE9FD" android:textSize="12sp" android:padding="10dp" android:background="@drawable/bg_status_card" android:maxLines="2" android:layout_marginTop="10dp"/>
+    <WebView android:id="@+id/web" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="#FFFFFF" android:layout_marginTop="10dp"/>
 </LinearLayout>
