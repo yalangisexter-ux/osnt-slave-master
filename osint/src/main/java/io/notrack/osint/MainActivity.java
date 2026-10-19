@@ -255,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
             String detail = e instanceof java.net.SocketTimeoutException
                 ? "Tor network timed out while connecting. The local proxy exists, but the Tor circuit may not be ready or the site may be slow."
                 : "Tor request failed: " + e.getClass().getSimpleName();
-            MAIN.post(() -> {
+            new Handler(Looper.getMainLooper()).post(() -> {
                 if (torModeEnabled && !isFinishing()) status.setText(detail);
             });
             return errorResponse(502, detail);
