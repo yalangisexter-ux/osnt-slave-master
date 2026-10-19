@@ -7,4 +7,15 @@
     <string-array name="modes">
         <item>Normal</item><item>Tor</item><item>VPN</item><item>Dark web</item>
     </string-array>
+    <string-array name="dork_templates">
+        <item>Custom operators</item>
+        <item>Exact phrase</item>
+        <item>Limit to domain</item>
+        <item>PDF documents</item>
+        <item>Word documents</item>
+        <item>Title matches</item>
+        <item>URL contains</item>
+        <item>Public profiles</item>
+        <item>Public document types</item>
+    </string-array>
 </resources>
