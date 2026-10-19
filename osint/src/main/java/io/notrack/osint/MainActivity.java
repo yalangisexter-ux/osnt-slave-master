@@ -290,17 +290,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void chooseVpnConfig() {
+        String vpnState = isVpnActive()
+            ? "Android reports an active VPN. OSINT browser traffic follows Android's active network routing."
+            : "No active VPN is detected. This app does not provide a VPN server or anonymous VPN endpoint. Import a valid WireGuard configuration from a provider or connect a VPN in Android Settings.";
         new AlertDialog.Builder(this)
-            .setTitle("VPN configuration")
-            .setMessage("Import a WireGuard .conf file to open it in the official WireGuard app. A valid configuration from your VPN provider is required; this app does not operate a VPN server.")
-            .setPositiveButton("Import .conf", (d, w) -> {
+            .setTitle(isVpnActive() ? "VPN is connected" : "VPN is not connected")
+            .setMessage(vpnState)
+            .setPositiveButton("Import WireGuard .conf", (d, w) -> {
                 Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 pick.addCategory(Intent.CATEGORY_OPENABLE);
                 pick.setType("*/*");
                 startActivityForResult(pick, VPN_CONFIG_REQUEST);
             })
             .setNeutralButton("Android VPN settings", (d, w) -> openVpnSettings())
-            .setNegativeButton("Cancel", null).show();
+            .setNegativeButton("Close", null).show();
     }
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -363,12 +366,17 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    private String query() {
+    private String baseQuery() {
         StringBuilder out = new StringBuilder(inQuery.getText().toString().trim());
         String domain = inDomain.getText().toString().trim();
         String url = inUrl.getText().toString().trim();
         if (!domain.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(domain); }
         if (!url.isEmpty() && !url.toLowerCase(java.util.Locale.ROOT).contains(".onion")) { if (out.length() > 0) out.append(' '); out.append(url); }
+        return out.toString().trim();
+    }
+
+    private String query() {
+        StringBuilder out = new StringBuilder(baseQuery());
         String sites = selectedSiteOperator();
         String content = selectedContentOperator();
         if (!sites.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(sites); }
@@ -474,7 +482,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void doDorkSearch() {
-        String terms = query().trim();
+        String terms = baseQuery().trim();
         if (terms.isEmpty()) {
             Toast.makeText(this, "Enter a public search term first", Toast.LENGTH_SHORT).show();
             return;
@@ -514,6 +522,10 @@ public class MainActivity extends AppCompatActivity {
                 dork = terms;
                 break;
         }
+        String sites = selectedSiteOperator();
+        String content = selectedContentOperator();
+        if (!sites.isEmpty()) dork += " " + sites;
+        if (!content.isEmpty()) dork += " " + content;
         String url = "https://www.google.com/search?q=" + enc(dork);
         remember("Google Dork [" + template + "]: " + dork);
         if ("Tor".equals(String.valueOf(mode.getSelectedItem()))) {
