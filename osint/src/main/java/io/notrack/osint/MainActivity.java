@@ -37,7 +37,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
     private EditText inPhone, inEmail, inUser, inDomain, inIp, inUrl;
-    private Spinner engine, mode;
+    private Spinner engine, mode, dorkTemplate;
     private WebView web;
     private TextView status;
     private static final String PREFS = "osint_memory";
@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         inPhone = findViewById(R.id.in_phone); inEmail = findViewById(R.id.in_email);
         inUser = findViewById(R.id.in_user); inDomain = findViewById(R.id.in_domain);
         inIp = findViewById(R.id.in_ip); inUrl = findViewById(R.id.in_url);
-        engine = findViewById(R.id.engine); mode = findViewById(R.id.mode);
+        engine = findViewById(R.id.engine); mode = findViewById(R.id.mode); dorkTemplate = findViewById(R.id.dork_template);
         web = findViewById(R.id.web); status = findViewById(R.id.status);
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -84,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
         web.loadUrl("https://www.google.com");
         findViewById(R.id.btn_update).setOnClickListener(v -> checkForUpdates());
         findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
+        findViewById(R.id.btn_dork).setOnClickListener(v -> doDorkSearch());
         findViewById(R.id.btn_back).setOnClickListener(v -> {
             if (web.canGoBack()) web.goBack();
             else status.setText("No previous page");
@@ -372,6 +373,58 @@ public class MainActivity extends AppCompatActivity {
             browse(url);
             status.setText("Searching " + selectedEngine + " (" + selectedMode + ")");
             if ("VPN".equals(selectedMode)) status.setText(isVpnActive() ? "VPN network detected; browsing uses Android system routing." : "No active Android VPN detected. Connect a VPN provider in Settings first.");
+        }
+    }
+
+
+    private void doDorkSearch() {
+        String terms = query().trim();
+        if (terms.isEmpty()) {
+            Toast.makeText(this, "Enter a public search term first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String domain = inDomain.getText().toString().trim();
+        if (domain.startsWith("https://")) domain = domain.substring(8);
+        if (domain.startsWith("http://")) domain = domain.substring(7);
+        if (domain.contains("/")) domain = domain.substring(0, domain.indexOf('/'));
+        String template = String.valueOf(dorkTemplate.getSelectedItem());
+        String dork;
+        switch (template) {
+            case "Exact phrase":
+                dork = "\"" + terms.replace("\"", "") + "\"";
+                break;
+            case "Limit to domain":
+                dork = domain.isEmpty() ? terms : "site:" + domain + " " + terms;
+                break;
+            case "PDF documents":
+                dork = terms + " filetype:pdf";
+                break;
+            case "Word documents":
+                dork = terms + " (filetype:doc OR filetype:docx)";
+                break;
+            case "Title matches":
+                dork = "intitle:" + terms;
+                break;
+            case "URL contains":
+                dork = "inurl:" + terms;
+                break;
+            case "Public profiles":
+                dork = "\"" + terms.replace("\"", "") + "\" (site:github.com OR site:linkedin.com OR site:x.com)";
+                break;
+            case "Public document types":
+                dork = terms + " (filetype:pdf OR filetype:docx OR filetype:xlsx OR filetype:pptx)";
+                break;
+            default:
+                dork = terms;
+                break;
+        }
+        String url = "https://www.google.com/search?q=" + enc(dork);
+        remember("Google Dork [" + template + "]: " + dork);
+        if ("Tor".equals(String.valueOf(mode.getSelectedItem()))) {
+            startTorAndBrowse(url);
+        } else {
+            browse(url);
+            status.setText("Google dork search: " + template);
         }
     }
 
