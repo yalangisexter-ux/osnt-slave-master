@@ -37,7 +37,8 @@ final class AppUpdater {
                     JSONObject release = new JSONObject(out.toString("UTF-8"));
                     String tag = release.optString("tag_name", "");
                     int latestCode = versionFromTag(tag);
-                    int installedCode = (int) activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0).getLongVersionCode();
+                    android.content.pm.PackageInfo info = activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0);
+                    int installedCode = Build.VERSION.SDK_INT >= 28 ? (int) info.getLongVersionCode() : info.versionCode;
                     JSONArray assets = release.optJSONArray("assets");
                     String downloadUrl = null;
                     if (assets != null) for (int i = 0; i < assets.length(); i++) {
