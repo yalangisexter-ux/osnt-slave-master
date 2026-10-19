@@ -2,6 +2,7 @@ package io.notrack.master;
 
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
@@ -24,10 +25,10 @@ public class MainActivity extends AppCompatActivity {
     private EditText peerIp;
     private final ArrayList<String> events = new ArrayList<>();
     private final ExecutorService pool = Executors.newCachedThreadPool();
-    private final Handler handler = new Handler();
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView status;
     private volatile boolean running = true;
-    private ServerSocket serverSocket;
+    private volatile ServerSocket serverSocket;
     private ArrayAdapter<String> adapter;
 
     @Override public void onCreate(Bundle state) {
@@ -41,18 +42,17 @@ public class MainActivity extends AppCompatActivity {
         peerIp.setText(getSharedPreferences("master", 0).getString("slave_ip", ""));
         findViewById(R.id.btn_update).setOnClickListener(v -> openUpdates());
         findViewById(R.id.btn_connect).setOnClickListener(v -> connectToSlave());
-        addEvent("Master started. Listening on TCP port 9877.");
+        addEvent("Master started.");
         pool.execute(() -> {
-            try {
-                ServerSocket listener = new ServerSocket(9877);
+            try (ServerSocket listener = new ServerSocket(9877)) {
                 serverSocket = listener;
-                status("Listening on port 9877");
+                status("Listening on local TCP port 9877. Remote networks may block direct TCP.");
                 while (running) {
                     Socket client = listener.accept();
                     pool.execute(() -> handleSlave(client));
                 }
             } catch (Exception e) {
-                if (running) status("Server error: " + e.getMessage());
+                if (running) status("Listener unavailable. Check whether port 9877 is already in use.");
             }
         });
     }
@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
         String host = peerIp.getText().toString().trim();
         if (host.isEmpty()) { peerIp.setError("Enter the Slave IP or hostname"); return; }
         getSharedPreferences("master", 0).edit().putString("slave_ip", host).apply();
+        status("Testing connection to " + host + "…");
         pool.execute(() -> {
             try (Socket socket = new Socket()) {
                 socket.connect(new java.net.InetSocketAddress(host, 9876), 5000);
@@ -68,12 +69,13 @@ public class MainActivity extends AppCompatActivity {
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out.println("PING");
-                String response = in.readLine();
-                if ("ACK:PING".equals(response)) {
-                    addEvent("Connected to Slave at " + host);
-                    status("Connection test successful: " + host);
-                } else status("Connected, but unexpected response from " + host);
-            } catch (Exception e) { status("Cannot reach " + host + ": " + e.getMessage()); }
+                if ("ACK:PING".equals(in.readLine())) {
+                    addEvent("Connection test succeeded: " + host);
+                    status("Connection test passed for " + host);
+                } else status("Unexpected reply from " + host);
+            } catch (Exception e) {
+                status("Cannot reach peer. Check address, network, and firewall.");
+            }
         });
     }
 
@@ -81,23 +83,39 @@ public class MainActivity extends AppCompatActivity {
         try (Socket s = socket;
              BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
              PrintWriter out = new PrintWriter(s.getOutputStream(), true)) {
+            s.setSoTimeout(30000);
             String line;
             while (running && (line = in.readLine()) != null) {
                 if ("BYE".equals(line)) break;
-                addEvent("Slave: " + line);
+                if ("PING".equals(line)) {
+                    out.println("ACK:PING");
+                    continue;
+                }
+                String display = line.startsWith("MESSAGE:") ? line.substring(8) : line;
+                addEvent("Slave: " + display);
                 out.println("OK");
             }
-        } catch (Exception e) { if (running) status("Peer connection ended: " + e.getMessage()); }
+        } catch (Exception e) {
+            if (running) status("Peer disconnected or timed out.");
+        }
     }
 
     private void addEvent(String event) {
-        handler.post(() -> { events.add(event); adapter.notifyDataSetChanged(); });
+        handler.post(() -> {
+            events.add(event);
+            if (events.size() > 200) events.remove(0);
+            adapter.notifyDataSetChanged();
+            list.setSelection(events.size() - 1);
+        });
     }
+
     private void status(String value) { handler.post(() -> status.setText(value)); }
+
     private void openUpdates() {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest"))); }
         catch (Exception e) { Toast.makeText(this, "Unable to open release page", Toast.LENGTH_LONG).show(); }
     }
+
     @Override protected void onDestroy() {
         running = false;
         try { if (serverSocket != null) serverSocket.close(); } catch (Exception ignored) {}
