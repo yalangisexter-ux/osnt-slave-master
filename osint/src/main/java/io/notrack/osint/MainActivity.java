@@ -581,15 +581,14 @@ public class MainActivity extends AppCompatActivity {
 
     // ==================== DORK SELECTOR ====================
     private void showDorkSelector() {
-        String[] categories = DORK_CATEGORIES;
-        if (categories.length == 0) categories = new String[]{
+        final String[] categories = DORK_CATEGORIES.length == 0 ? new String[]{
                 "SQL Injection", "XSS", "File Upload", "Admin Panels",
                 "Login Pages", "Config Files", "Database Files",
                 "Log Files", "Backup Files", "Camera Streams",
                 "Open FTP", "WordPress", "Joomla", "Email Lists",
                 "Password Files", "VPN Configs", "Phone Numbers",
                 "Credit Cards", "SSN", "iCloud Leaks"
-        };
+        } : DORK_CATEGORIES;
         new AlertDialog.Builder(this).setTitle("Google Dork Categories")
                 .setItems(categories, (d, w) -> {
                     String dork = generateDork(categories[w]);
