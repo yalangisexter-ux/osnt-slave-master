@@ -76,6 +76,15 @@ final class AppUpdater {
                         output.getFD().sync();
                     } finally { d.disconnect(); }
                     MAIN.post(() -> {
+                        if (!sameSigningCertificate(activity, apk)) {
+                            status.setText("Update downloaded, but its signing certificate differs from this installation.");
+                            new android.app.AlertDialog.Builder(activity)
+                                .setTitle("One-time reinstall required")
+                                .setMessage("Android cannot install this APK over the current app because it was signed with a different certificate. This can happen when moving from older builds to the stable signing identity. Back up anything important, uninstall the current app, then install the downloaded APK again. Uninstalling may remove local app data. Future releases using the same signing identity should update normally.")
+                                .setPositiveButton("OK", null)
+                                .show();
+                            return;
+                        }
                         status.setText("Update downloaded · opening Android installer");
                         install(activity, apk);
                     });
@@ -92,6 +101,39 @@ final class AppUpdater {
     private static int versionFromTag(String tag) {
         try { String[] p = tag.replaceFirst("^[^0-9]*", "").split("\\."); return Integer.parseInt(p[p.length - 1]); }
         catch (Exception e) { return -1; }
+    }
+
+    private static boolean sameSigningCertificate(Activity activity, File apk) {
+        try {
+            android.content.pm.PackageManager pm = activity.getPackageManager();
+            android.content.pm.PackageInfo installed;
+            android.content.pm.PackageInfo candidate;
+            if (Build.VERSION.SDK_INT >= 28) {
+                installed = pm.getPackageInfo(activity.getPackageName(), android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+                candidate = pm.getPackageArchiveInfo(apk.getAbsolutePath(), android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+                if (candidate == null || installed.signingInfo == null || candidate.signingInfo == null) return true;
+                android.content.pm.Signature[] current = installed.signingInfo.getApkContentsSigners();
+                android.content.pm.Signature[] downloaded = candidate.signingInfo.getApkContentsSigners();
+                return sameSignatures(current, downloaded);
+            } else {
+                installed = pm.getPackageInfo(activity.getPackageName(), android.content.pm.PackageManager.GET_SIGNATURES);
+                candidate = pm.getPackageArchiveInfo(apk.getAbsolutePath(), android.content.pm.PackageManager.GET_SIGNATURES);
+                if (candidate == null) return true;
+                return sameSignatures(installed.signatures, candidate.signatures);
+            }
+        } catch (Exception ignored) {
+            // If Android cannot expose archive signing metadata, let the platform installer decide.
+            return true;
+        }
+    }
+
+    private static boolean sameSignatures(android.content.pm.Signature[] first, android.content.pm.Signature[] second) {
+        if (first == null || second == null || first.length == 0 || first.length != second.length) return false;
+        java.util.Set<String> a = new java.util.HashSet<>();
+        java.util.Set<String> b = new java.util.HashSet<>();
+        for (android.content.pm.Signature signature : first) a.add(signature.toCharsString());
+        for (android.content.pm.Signature signature : second) b.add(signature.toCharsString());
+        return a.equals(b);
     }
 
     private static void install(Activity activity, File apk) {
