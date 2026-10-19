@@ -1,33 +1,28 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="#080D18" android:padding="16dp">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="MASTER CONTROL" android:textColor="#F8FAFC" android:textSize="24sp"
-        android:textStyle="bold" android:letterSpacing="0.04"/>
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Peer connection and message monitor" android:textColor="#94A3B8"
-        android:textSize="12sp" android:layout_marginBottom="12dp"/>
-    <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Check for updates" android:backgroundTint="#1E293B" android:textColor="#E2E8F0"/>
-    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Starting listener…" android:textColor="#93C5FD" android:textSize="12sp"
-        android:padding="10dp" android:background="#111827" android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Direct TCP is intended for trusted networks. Internet access may require firewall/router configuration."
-        android:textColor="#94A3B8" android:textSize="12sp" android:layout_marginBottom="8dp"/>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="10dp">
-        <EditText android:id="@+id/peer_ip" android:layout_width="0dp" android:layout_weight="1"
-            android:layout_height="wrap_content" android:hint="Slave IP / hostname" android:inputType="textUri"
-            android:singleLine="true" android:backgroundTint="#475569" android:textColor="#F8FAFC"
-            android:textColorHint="#94A3B8" android:padding="10dp"/>
-        <Button android:id="@+id/btn_connect" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Test" android:backgroundTint="#2563EB" android:textColor="#FFFFFF"/>
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="#0B1020" android:padding="16dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingBottom="16dp">
+        <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_master" android:contentDescription="Master icon" android:layout_marginEnd="12dp"/>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MASTER CONTROL" android:textColor="#F8FAFC" android:textSize="21sp" android:textStyle="bold"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Peer network · Activity monitor" android:textColor="#9AA8C2" android:textSize="12sp"/>
+        </LinearLayout>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MASTER" android:textColor="#FCD34D" android:textSize="11sp" android:textStyle="bold" android:background="@drawable/bg_status_pill" android:paddingHorizontal="10dp" android:paddingVertical="6dp"/>
     </LinearLayout>
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="ACTIVITY" android:textColor="#CBD5E1" android:textStyle="bold" android:textSize="12sp"
-        android:layout_marginBottom="6dp"/>
-    <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:background="#111827" android:divider="#263244" android:dividerHeight="1dp"
-        android:padding="4dp" android:clipToPadding="false"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_surface_card" android:padding="14dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="PEER CONNECTION" android:textColor="#C4D0E5" android:textStyle="bold" android:textSize="12sp" android:layout_marginBottom="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+            <EditText android:id="@+id/peer_ip" android:layout_width="0dp" android:layout_weight="1" android:layout_height="50dp" android:hint="Slave IP / hostname" android:inputType="textUri" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp"/>
+            <Button android:id="@+id/btn_connect" android:layout_width="wrap_content" android:layout_height="50dp" android:text="Test link" android:textAllCaps="false" android:textStyle="bold" android:background="@drawable/bg_primary_button" android:textColor="#06101C" android:layout_marginStart="8dp"/>
+        </LinearLayout>
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Starting listener…" android:textColor="#8BE9FD" android:textSize="12sp" android:padding="12dp" android:background="@drawable/bg_status_card" android:layout_marginTop="10dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Direct TCP works best on a trusted network. Routers and firewalls may block remote connections." android:textColor="#9AA8C2" android:textSize="12sp" android:layout_marginTop="10dp"/>
+    </LinearLayout>
+    <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none" android:layout_marginTop="10dp">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/btn_update" android:layout_width="wrap_content" android:layout_height="46dp" android:text="Update app" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF" android:layout_marginEnd="8dp"/>
+            <Button android:layout_width="wrap_content" android:layout_height="46dp" android:text="Connection help" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="8dp" android:onClick="unused"/>
+        </LinearLayout>
+    </HorizontalScrollView>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ACTIVITY FEED" android:textColor="#C4D0E5" android:textStyle="bold" android:textSize="12sp" android:layout_marginTop="16dp" android:layout_marginBottom="8dp"/>
+    <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@drawable/bg_surface_card" android:divider="#293650" android:dividerHeight="1dp" android:padding="8dp" android:clipToPadding="false"/>
 </LinearLayout>
