@@ -50,6 +50,18 @@ final class AppUpdater {
                         return;
                     }
                     if (downloadUrl == null || downloadUrl.isEmpty()) throw new Exception("Matching APK was not found in the release");
+                    // Check Android's install permission before downloading to avoid repeated large downloads.
+                    // Standard Android apps cannot silently install APK updates on personal devices.
+                    if (Build.VERSION.SDK_INT >= 26 && !activity.getPackageManager().canRequestPackageInstalls()) {
+                        MAIN.post(() -> {
+                            status.setText("Allow installs for this app, then tap Check for updates again.");
+                            Toast.makeText(activity, "Enable Allow from this source. The APK will download after you return and retry.", Toast.LENGTH_LONG).show();
+                            Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:" + activity.getPackageName()));
+                            activity.startActivity(settings);
+                        });
+                        return;
+                    }
                     String finalUrl = downloadUrl;
                     MAIN.post(() -> status.setText("Downloading update " + tag + "…"));
                     HttpURLConnection d = (HttpURLConnection) new URL(finalUrl).openConnection();
@@ -83,13 +95,6 @@ final class AppUpdater {
     }
 
     private static void install(Activity activity, File apk) {
-        if (Build.VERSION.SDK_INT >= 26 && !activity.getPackageManager().canRequestPackageInstalls()) {
-            Toast.makeText(activity, "Allow this app to install the downloaded update, then tap Update again.", Toast.LENGTH_LONG).show();
-            Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:" + activity.getPackageName()));
-            activity.startActivity(settings);
-            return;
-        }
         Uri uri = FileProvider.getUriForFile(activity, activity.getPackageName() + ".fileprovider", apk);
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setDataAndType(uri, "application/vnd.android.package-archive");
