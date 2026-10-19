@@ -2,6 +2,14 @@ package io.notrack.osint;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.os.Handler;
+import android.os.Looper;
+import org.json.JSONObject;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.app.AlertDialog;
@@ -41,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(false);
         web.loadUrl("https://www.google.com");
-        findViewById(R.id.btn_update).setOnClickListener(v -> openExternal("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest", "Opened latest release page"));
+        findViewById(R.id.btn_update).setOnClickListener(v -> checkForUpdates());
         findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
         findViewById(R.id.btn_back).setOnClickListener(v -> {
             if (web.canGoBack()) web.goBack();
@@ -53,10 +61,99 @@ public class MainActivity extends AppCompatActivity {
             status.setText("Search fields cleared");
         });
         findViewById(R.id.btn_web).setOnClickListener(v -> browse("https://www.google.com"));
-        findViewById(R.id.btn_dark).setOnClickListener(v -> browse("https://www.torproject.org/"));
-        findViewById(R.id.btn_tor).setOnClickListener(v -> openExternal("https://www.torproject.org/download/", "Tor needs a Tor-enabled browser or configured service."));
+        findViewById(R.id.btn_dark).setOnClickListener(v -> openTorBrowser("https://check.torproject.org/"));
+        findViewById(R.id.btn_tor).setOnClickListener(v -> openTorBrowser("https://www.torproject.org/download/"));
         findViewById(R.id.btn_vpn).setOnClickListener(v -> openVpnSettings());
         findViewById(R.id.btn_mem).setOnClickListener(v -> showMemory());
+    }
+
+
+    private void openTorBrowser(String url) {
+        try {
+            Intent tor = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            tor.setPackage("org.torproject.torbrowser");
+            startActivity(tor);
+            status.setText("Opened in Tor Browser. Confirm Tor is connected before entering sensitive information.");
+        } catch (Exception e) {
+            try {
+                Intent browser = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.torproject.org/download/"));
+                startActivity(browser);
+                status.setText("Tor Browser is not detected. Install it, connect to Tor, then retry.");
+            } catch (Exception ignored) {
+                status.setText("No browser available. Install Tor Browser from the official Tor Project.");
+            }
+        }
+    }
+
+    private boolean isVpnActive() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            if (cm == null) return false;
+            for (Network network : cm.getAllNetworks()) {
+                NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+                if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true;
+            }
+        } catch (Exception ignored) { }
+        return false;
+    }
+
+    private void checkForUpdates() {
+        status.setText("Checking latest app release…");
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL endpoint = new URL("https://api.github.com/repos/yalangisexter-ux/osnt-slave-master/releases/latest");
+                connection = (HttpURLConnection) endpoint.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+                connection.setRequestProperty("Accept", "application/vnd.github+json");
+                int code = connection.getResponseCode();
+                if (code != 200) throw new Exception("GitHub returned HTTP " + code);
+                java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(connection.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+                StringBuilder body = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) body.append(line);
+                reader.close();
+                JSONObject release = new JSONObject(body.toString());
+                String tag = release.optString("tag_name", "Latest release");
+                String page = release.optString("html_url", "https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest");
+                String assetUrl = "";
+                org.json.JSONArray assets = release.optJSONArray("assets");
+                if (assets != null) {
+                    for (int i = 0; i < assets.length(); i++) {
+                        JSONObject asset = assets.optJSONObject(i);
+                        if (asset == null) continue;
+                        String name = asset.optString("name", "");
+                        if (name.toLowerCase(java.util.Locale.ROOT).contains("osint") && name.toLowerCase(java.util.Locale.ROOT).endsWith(".apk")) {
+                            assetUrl = asset.optString("browser_download_url", "");
+                            break;
+                        }
+                    }
+                }
+                final String finalPage = page;
+                final String finalAsset = assetUrl;
+                new Handler(Looper.getMainLooper()).post(() -> new AlertDialog.Builder(this)
+                    .setTitle("Latest release: " + tag)
+                    .setMessage(finalAsset.isEmpty()
+                        ? "A release was found, but no OSINT APK asset was detected. Open release page to review available downloads."
+                        : "A release was found. Open the APK download in your browser; Android may ask you to allow installation from that source.")
+                    .setPositiveButton(finalAsset.isEmpty() ? "Open release" : "Download APK", (d, w) -> openExternal(finalAsset.isEmpty() ? finalPage : finalAsset, "Opened release download"))
+                    .setNegativeButton("Cancel", null).show());
+                new Handler(Looper.getMainLooper()).post(() -> status.setText("Latest release checked: " + tag));
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    status.setText("Update check failed. Check internet and try again.");
+                    new AlertDialog.Builder(this).setTitle("Could not check updates")
+                        .setMessage("Unable to reach GitHub releases. You can still open the release page.")
+                        .setPositiveButton("Open releases", (d, w) -> openExternal("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest", "Opened releases"))
+                        .setNegativeButton("Close", null).show();
+                });
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        }).start();
     }
 
     private boolean route(Uri uri) {
@@ -108,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             browse(url);
             status.setText("Searching " + selectedEngine + " (" + selectedMode + ")");
-            if ("VPN".equals(selectedMode)) status.append(" · Android VPN applies only when already connected");
+            if ("VPN".equals(selectedMode)) status.setText(isVpnActive() ? "VPN network detected; browsing uses Android system routing." : "No active Android VPN detected. Connect a VPN provider in Settings first.");
         }
     }
 
