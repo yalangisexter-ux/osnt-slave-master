@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     // ==================== TOR ====================
     private boolean torModeEnabled = false, torActive = false, torStarting = false;
     private String pendingTorUrl = "https://check.torproject.org/";
-    private Process torProcess;
+    private java.lang.Process torProcess;
     private final ServiceConnection torConnection = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName name, IBinder binder) { waitForTor(); }
         @Override public void onServiceDisconnected(ComponentName name) { torActive = false; torModeEnabled = false; }
@@ -606,8 +606,8 @@ public class MainActivity extends AppCompatActivity {
 
     // ==================== DORK SELECTOR ====================
     private void showDorkSelector() {
-        String[] categories = DORK_CATEGORIES;
-        if (categories.length == 0) categories = new String[]{
+        String[] _tmp = DORK_CATEGORIES;
+        if (_tmp.length == 0) _tmp = new String[]{
                 "SQL Injection", "XSS", "File Upload", "Admin Panels",
                 "Login Pages", "Config Files", "Database Files",
                 "Log Files", "Backup Files", "Camera Streams",
@@ -615,6 +615,7 @@ public class MainActivity extends AppCompatActivity {
                 "Password Files", "VPN Configs", "Phone Numbers",
                 "Credit Cards", "SSN", "iCloud Leaks"
         };
+        final String[] categories = _tmp;
         new AlertDialog.Builder(this).setTitle("Google Dork Categories")
                 .setItems(categories, (d, w) -> {
                     String dork = generateDork(categories[w]);

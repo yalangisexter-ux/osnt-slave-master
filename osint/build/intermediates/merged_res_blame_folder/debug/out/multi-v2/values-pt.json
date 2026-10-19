@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "io.notrack.osint-mergeDebugResources-21:/values-pt/values-pt.xml",
+            "outputFile": "io.notrack.osint-mergeDebugResources-30:/values-pt/values-pt.xml",
             "map": [
                 {
                     "source": "C:\\Users\\DELL\\.gradle\\caches\\transforms-3\\de8c3b838232e943fc8a6a53f2c25d4a\\transformed\\core-1.12.0\\res\\values-pt\\values-pt.xml",
