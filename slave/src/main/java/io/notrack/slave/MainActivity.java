@@ -123,8 +123,7 @@ public class MainActivity extends AppCompatActivity {
     private void status(String value) { handler.post(() -> status.setText(value)); }
 
     private void openUpdates() {
-        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest"))); }
-        catch (Exception e) { Toast.makeText(this, "Unable to open release page", Toast.LENGTH_LONG).show(); }
+        AppUpdater.check(this, "chat-slave.apk", status);
     }
 
     @Override protected void onDestroy() {
