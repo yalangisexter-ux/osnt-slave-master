@@ -1,47 +1,191 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="#0B1020" android:padding="16dp">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingBottom="14dp">
-        <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_osint" android:contentDescription="OSINT icon" android:layout_marginEnd="12dp"/>
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="OSINT WORKSPACE" android:textColor="#F8FAFC" android:textSize="21sp" android:textStyle="bold" android:letterSpacing="0.025"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Public-source research · Browser tools" android:textColor="#9AA8C2" android:textSize="12sp"/>
-        </LinearLayout>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LIVE" android:textColor="#67E8F9" android:textSize="11sp" android:textStyle="bold" android:background="@drawable/bg_status_pill" android:paddingHorizontal="10dp" android:paddingVertical="6dp"/>
-    </LinearLayout>
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="RESEARCH TARGET" android:textColor="#C4D0E5" android:textStyle="bold" android:textSize="12sp" android:layout_marginBottom="8dp"/>
-    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="false" android:clipToPadding="false">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_surface_card" android:padding="14dp">
-            <EditText android:id="@+id/in_phone" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Phone number" android:inputType="phone" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
-            <EditText android:id="@+id/in_email" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Email address" android:inputType="textEmailAddress" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
-            <EditText android:id="@+id/in_user" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Username / handle" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
-            <EditText android:id="@+id/in_domain" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Domain" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
-            <EditText android:id="@+id/in_ip" android:layout_width="match_parent" android:layout_height="48dp" android:hint="IP address" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="8dp"/>
-            <EditText android:id="@+id/in_url" android:layout_width="match_parent" android:layout_height="48dp" android:hint="URL / additional terms" android:inputType="textUri" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" android:layout_marginBottom="12dp"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SEARCH ENGINE" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginBottom="2dp"/>
-            <Spinner android:id="@+id/engine" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/engines" android:backgroundTint="#40506C" android:layout_marginBottom="8dp"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="GOOGLE DORKING / SEARCH OPERATORS" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginBottom="2dp"/>
-            <Spinner android:id="@+id/dork_template" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/dork_templates" android:backgroundTint="#40506C" android:layout_marginBottom="8dp"/>
-            <Button android:id="@+id/btn_dork" android:layout_width="match_parent" android:layout_height="48dp" android:text="⌕   Build Google dork search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF" android:layout_marginBottom="12dp"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="CONNECTION MODE" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginBottom="2dp"/>
-            <Spinner android:id="@+id/mode" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/modes" android:backgroundTint="#40506C" android:layout_marginBottom="12dp"/>
-            <Button android:id="@+id/btn_search" android:layout_width="match_parent" android:layout_height="52dp" android:text="⌕   Search public sources" android:textAllCaps="false" android:textStyle="bold" android:background="@drawable/bg_primary_button" android:textColor="#06101C"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="10dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                    <Button android:id="@+id/btn_back" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="‹ Back" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="4dp" android:minWidth="0dp" android:paddingHorizontal="2dp"/>
-                    <Button android:id="@+id/btn_clear" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="Clear" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginHorizontal="4dp" android:minWidth="0dp" android:paddingHorizontal="2dp"/>
-                    <Button android:id="@+id/btn_web" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="Browser" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginStart="4dp" android:minWidth="0dp" android:paddingHorizontal="2dp"/>
-                </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="6dp">
-                    <Button android:id="@+id/btn_dark" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="Onion" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginEnd="4dp" android:minWidth="0dp" android:paddingHorizontal="2dp"/>
-                    <Button android:id="@+id/btn_tor" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="Start Tor" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginHorizontal="4dp" android:minWidth="0dp" android:paddingHorizontal="2dp"/>
-                    <Button android:id="@+id/btn_vpn" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="VPN" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginStart="4dp" android:minWidth="0dp" android:paddingHorizontal="2dp"/>
-                </LinearLayout>
-                <Button android:id="@+id/btn_mem" android:layout_width="match_parent" android:layout_height="44dp" android:text="Saved searches" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" android:layout_marginTop="6dp"/>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="#0B1020">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="18dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="24dp">
+            <TextView
+                android:id="@+id/btn_menu"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:gravity="center"
+                android:text="☰"
+                android:textColor="#F8FAFC"
+                android:textSize="28sp"
+                android:background="@drawable/bg_action_button"
+                android:contentDescription="Open settings menu" />
+            <ImageView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/ic_osint"
+                android:contentDescription="OSINT icon" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="10dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="OSINT WORKSPACE"
+                    android:textColor="#F8FAFC"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Clean public-source search"
+                    android:textColor="#9AA8C2"
+                    android:textSize="12sp" />
             </LinearLayout>
-            <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="48dp" android:text="Check for updates" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF" android:layout_marginTop="10dp"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SEARCH"
+            android:textColor="#C4D0E5"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:layout_marginBottom="10dp" />
+
+        <EditText
+            android:id="@+id/in_query"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="Enter a name, username, domain, or keyword"
+            android:singleLine="true"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:background="@drawable/bg_input"
+            android:textColor="#F8FAFC"
+            android:textColorHint="#8290AA"
+            android:paddingHorizontal="14dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SEARCH ENGINE"
+            android:textColor="#AEBBD2"
+            android:textStyle="bold"
+            android:textSize="11sp"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/engine"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:entries="@array/engines"
+            android:backgroundTint="#40506C" />
+
+        <Button
+            android:id="@+id/btn_search"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="16dp"
+            android:text="⌕   Search public sources"
+            android:textAllCaps="false"
+            android:textStyle="bold"
+            android:background="@drawable/bg_primary_button"
+            android:textColor="#06101C" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Search history and advanced tools are available from the menu."
+            android:textColor="#8290AA"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:padding="12dp"
+            android:text="Ready"
+            android:textColor="#8BE9FD"
+            android:textSize="12sp"
+            android:background="@drawable/bg_status_card"
+            android:maxLines="3" />
+
+        <WebView
+            android:id="@+id/web"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:visibility="gone"
+            android:background="#FFFFFF"
+            android:layout_marginTop="12dp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="310dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="#111A2D"
+        android:elevation="16dp"
+        android:fillViewport="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="18dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="WORKSPACE MENU"
+                android:textColor="#F8FAFC"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:paddingTop="12dp"
+                android:paddingBottom="4dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Search tools · History · Settings"
+                android:textColor="#9AA8C2"
+                android:textSize="12sp"
+                android:paddingBottom="18dp" />
+
+            <Button android:id="@+id/btn_mem" android:layout_width="match_parent" android:layout_height="48dp" android:text="Search history · Reuse a search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_dork" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" android:text="Google dork search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ADVANCED SEARCH OPTIONS" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="20dp" android:layout_marginBottom="4dp" />
+            <EditText android:id="@+id/in_domain" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Optional domain filter" android:singleLine="true" android:inputType="textUri" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" />
+            <EditText android:id="@+id/in_url" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" android:hint="URL / .onion address" android:singleLine="true" android:inputType="textUri" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DORK TEMPLATE" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="14dp" android:layout_marginBottom="4dp" />
+            <Spinner android:id="@+id/dork_template" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/dork_templates" android:backgroundTint="#40506C" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="CONNECTION MODE" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="14dp" android:layout_marginBottom="4dp" />
+            <Spinner android:id="@+id/mode" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/modes" android:backgroundTint="#40506C" />
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="BROWSER & CONNECTION" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="20dp" android:layout_marginBottom="4dp" />
+            <Button android:id="@+id/btn_web" android:layout_width="match_parent" android:layout_height="46dp" android:text="Open browser" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_dark" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Open .onion address" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_tor" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Start Tor connectivity check" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_vpn" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="VPN configuration" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="APP SETTINGS" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="20dp" android:layout_marginBottom="4dp" />
+            <Button android:id="@+id/btn_clear" android:layout_width="match_parent" android:layout_height="46dp" android:text="Clear search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_back" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Browser back" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Check for updates" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="OSINT Workspace · v1.0" android:textColor="#8290AA" android:textSize="11sp" android:gravity="center" android:paddingTop="24dp" android:paddingBottom="16dp" />
         </LinearLayout>
     </ScrollView>
-    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Ready" android:textColor="#8BE9FD" android:textSize="12sp" android:padding="10dp" android:background="@drawable/bg_status_card" android:maxLines="2" android:layout_marginTop="10dp"/>
-    <WebView android:id="@+id/web" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="gone" android:background="#FFFFFF" android:layout_marginTop="10dp"/>
-</LinearLayout>
+</androidx.drawerlayout.widget.DrawerLayout>
