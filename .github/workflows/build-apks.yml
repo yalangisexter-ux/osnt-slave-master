@@ -31,6 +31,12 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
+      - name: Reuse generated debug signing identity for future updates
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: osnt-debug-signing-identity-v1
+
       - name: Build OSINT, Master & Slave APKs
         run: |
           sh gradlew --no-daemon clean assembleDebug
