@@ -17,6 +17,6 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     // Native Tor daemon library; Onion Browser itself is iOS-only and is not an Android dependency.
-    implementation 'info.guardianproject:tor-android:0.4.9.13.2'
+    implementation 'info.guardianproject:tor-android:0.4.8.16'
     implementation 'info.guardianproject:jtorctl:0.4.5.7'
 }
