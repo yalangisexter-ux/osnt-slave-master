@@ -22,9 +22,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.viewpager2.widget.ViewPager2;
-import com.google.android.material.tabs.TabLayout;
-import com.google.android.material.tabs.TabLayoutMediator;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -50,8 +47,6 @@ public class MainActivity extends AppCompatActivity {
 
     // ==================== UI COMPONENTS ====================
     private DrawerLayout drawer;
-    private TabLayout tabLayout;
-    private ViewPager2 viewPager;
     private WebView web;
     private EditText inQuery, inDomain, inUrl, inFilePath;
     private TextView status;
@@ -95,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         setupWebView();
         setupDrawer();
-        setupTabs();
         restoreSelections();
         loadSavedApiKeys();
         checkForUpdates();
@@ -125,8 +119,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void initViews() {
         drawer = findViewById(R.id.drawer_layout);
-        viewPager = findViewById(R.id.view_pager);
-        tabLayout = findViewById(R.id.tab_layout);
         web = findViewById(R.id.web_view);
         inQuery = findViewById(R.id.in_query);
         inDomain = findViewById(R.id.in_domain);
@@ -225,16 +217,6 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_dating).setOnClickListener(v -> { showDatingLeaks(); closeDrawer(); });
         findViewById(R.id.btn_brute).setOnClickListener(v -> { showBruteForcePanel(); closeDrawer(); });
         findViewById(R.id.btn_otp).setOnClickListener(v -> { showOtpBypass(); closeDrawer(); });
-        findViewById(R.id.btn_password).setOnClickListener(v -> { showPasswordCracker(); closeDrawer(); });
-        findViewById(R.id.btn_stream).setOnClickListener(v -> { showLiveStreaming(); closeDrawer(); });
-        findViewById(R.id.btn_video).setOnClickListener(v -> { showVideoPlayer(); closeDrawer(); });
-        findViewById(R.id.btn_files).setOnClickListener(v -> { browseFiles(); closeDrawer(); });
-        findViewById(R.id.btn_photos).setOnClickListener(v -> { browsePhotos(); closeDrawer(); });
-        findViewById(R.id.btn_docs).setOnClickListener(v -> { browseDocs(); closeDrawer(); });
-        findViewById(R.id.btn_pdfs).setOnClickListener(v -> { browsePdfs(); closeDrawer(); });
-        findViewById(R.id.btn_hpb).setOnClickListener(v -> { showHpbPanel(); closeDrawer(); });
-        findViewById(R.id.btn_leaksio).setOnClickListener(v -> { showLeaksIoPanel(); closeDrawer(); });
-        findViewById(R.id.btn_settings).setOnClickListener(v -> { showSettings(); closeDrawer(); });
         findViewById(R.id.btn_clear).setOnClickListener(v -> { clearInputs(); closeDrawer(); });
         // New one-tap & bot buttons
         findViewById(R.id.btn_onion_list).setOnClickListener(v -> { openOnionSites(); closeDrawer(); });
@@ -253,13 +235,6 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_forward).setOnClickListener(v -> { if (web.canGoForward()) web.goForward(); });
         findViewById(R.id.btn_refresh).setOnClickListener(v -> { web.reload(); });
         findViewById(R.id.btn_hamburger).setOnClickListener(v -> drawer.openDrawer(Gravity.START));
-    }
-
-    private void setupTabs() {
-        // Simple tab setup - browser, search results, tools
-        String[] tabs = {"Browser", "Results", "Tools"};
-        TabLayoutMediator mediator = new TabLayoutMediator(tabLayout, viewPager, (tab, pos) -> tab.setText(tabs[pos]));
-        mediator.attach();
     }
 
     private void closeDrawer() {
@@ -606,16 +581,13 @@ public class MainActivity extends AppCompatActivity {
 
     // ==================== DORK SELECTOR ====================
     private void showDorkSelector() {
-        String[] _tmp = DORK_CATEGORIES;
-        if (_tmp.length == 0) _tmp = new String[]{
-                "SQL Injection", "XSS", "File Upload", "Admin Panels",
-                "Login Pages", "Config Files", "Database Files",
+        final String[] categories = DORK_CATEGORIES.length == 0 ? new String[]{
+                "SQL Injection", "XSS", "File Upload", "Admin Panels", "Login Pages", "Config Files", "Database Files",
                 "Log Files", "Backup Files", "Camera Streams",
                 "Open FTP", "WordPress", "Joomla", "Email Lists",
                 "Password Files", "VPN Configs", "Phone Numbers",
                 "Credit Cards", "SSN", "iCloud Leaks"
-        };
-        final String[] categories = _tmp;
+        } : DORK_CATEGORIES;
         new AlertDialog.Builder(this).setTitle("Google Dork Categories")
                 .setItems(categories, (d, w) -> {
                     String dork = generateDork(categories[w]);
