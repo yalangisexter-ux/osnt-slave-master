@@ -316,62 +316,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkForUpdates() {
-        status.setText("Checking latest app release…");
-        new Thread(() -> {
-            HttpURLConnection connection = null;
-            try {
-                URL endpoint = new URL("https://api.github.com/repos/yalangisexter-ux/osnt-slave-master/releases/latest");
-                connection = (HttpURLConnection) endpoint.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(10000);
-                connection.setRequestProperty("Accept", "application/vnd.github+json");
-                int code = connection.getResponseCode();
-                if (code != 200) throw new Exception("GitHub returned HTTP " + code);
-                java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(connection.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
-                StringBuilder body = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) body.append(line);
-                reader.close();
-                JSONObject release = new JSONObject(body.toString());
-                String tag = release.optString("tag_name", "Latest release");
-                String page = release.optString("html_url", "https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest");
-                String assetUrl = "";
-                org.json.JSONArray assets = release.optJSONArray("assets");
-                if (assets != null) {
-                    for (int i = 0; i < assets.length(); i++) {
-                        JSONObject asset = assets.optJSONObject(i);
-                        if (asset == null) continue;
-                        String name = asset.optString("name", "");
-                        if (name.toLowerCase(java.util.Locale.ROOT).contains("osint") && name.toLowerCase(java.util.Locale.ROOT).endsWith(".apk")) {
-                            assetUrl = asset.optString("browser_download_url", "");
-                            break;
-                        }
-                    }
-                }
-                final String finalPage = page;
-                final String finalAsset = assetUrl;
-                new Handler(Looper.getMainLooper()).post(() -> new AlertDialog.Builder(this)
-                    .setTitle("Latest release: " + tag)
-                    .setMessage(finalAsset.isEmpty()
-                        ? "A release was found, but no OSINT APK asset was detected. Open release page to review available downloads."
-                        : "A release was found. Open the APK download in your browser; Android may ask you to allow installation from that source.")
-                    .setPositiveButton(finalAsset.isEmpty() ? "Open release" : "Download APK", (d, w) -> openExternal(finalAsset.isEmpty() ? finalPage : finalAsset, "Opened release download"))
-                    .setNegativeButton("Cancel", null).show());
-                new Handler(Looper.getMainLooper()).post(() -> status.setText("Latest release checked: " + tag));
-            } catch (Exception e) {
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    status.setText("Update check failed. Check internet and try again.");
-                    new AlertDialog.Builder(this).setTitle("Could not check updates")
-                        .setMessage("Unable to reach GitHub releases. You can still open the release page.")
-                        .setPositiveButton("Open releases", (d, w) -> openExternal("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest", "Opened releases"))
-                        .setNegativeButton("Close", null).show();
-                });
-            } finally {
-                if (connection != null) connection.disconnect();
-            }
-        }).start();
+        AppUpdater.check(this, "osint-master.apk", status);
     }
 
     private boolean route(Uri uri) {
