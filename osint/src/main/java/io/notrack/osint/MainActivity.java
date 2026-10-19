@@ -225,6 +225,17 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_update).setOnClickListener(v -> { checkForUpdates(); closeDrawer(); });
         findViewById(R.id.btn_playprotect).setOnClickListener(v -> { bypassPlayProtect(); closeDrawer(); });
         // One-tap connect row (main screen)
+        findViewById(R.id.btn_search2).setOnClickListener(v -> { doSearch(); closeDrawer(); });
+        findViewById(R.id.btn_password).setOnClickListener(v -> { showPasswordCracker(); closeDrawer(); });
+        findViewById(R.id.btn_hpb).setOnClickListener(v -> { showHpbPanel(); closeDrawer(); });
+        findViewById(R.id.btn_leaksio).setOnClickListener(v -> { leaksIoCheck(); closeDrawer(); });
+        findViewById(R.id.btn_stream).setOnClickListener(v -> { showLiveStreaming(); closeDrawer(); });
+        findViewById(R.id.btn_video).setOnClickListener(v -> { showVideoPlayer(); closeDrawer(); });
+        findViewById(R.id.btn_files).setOnClickListener(v -> { browseFiles(); closeDrawer(); });
+        findViewById(R.id.btn_photos).setOnClickListener(v -> { browsePhotos(); closeDrawer(); });
+        findViewById(R.id.btn_docs).setOnClickListener(v -> { browseDocs(); closeDrawer(); });
+        findViewById(R.id.btn_pdfs).setOnClickListener(v -> { browsePdfs(); closeDrawer(); });
+        findViewById(R.id.btn_settings).setOnClickListener(v -> { showSettings(); closeDrawer(); });
         findViewById(R.id.quick_tor).setOnClickListener(v -> { torModeEnabled = true; startTorAndBrowse("https://check.torproject.org/"); });
         findViewById(R.id.quick_vpn).setOnClickListener(v -> showVpnMenu());
         findViewById(R.id.quick_dark).setOnClickListener(v -> openDarkWeb());
