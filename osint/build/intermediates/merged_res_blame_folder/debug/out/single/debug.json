@@ -1,0 +1,38 @@
+[
+    {
+        "merged": "io.notrack.osint-merged_res-23:/drawable_bg_surface_card.xml.flat",
+        "source": "io.notrack.osint-main-25:/drawable/bg_surface_card.xml"
+    },
+    {
+        "merged": "io.notrack.osint-merged_res-23:/drawable_ic_osint.xml.flat",
+        "source": "io.notrack.osint-main-25:/drawable/ic_osint.xml"
+    },
+    {
+        "merged": "io.notrack.osint-merged_res-23:/drawable_bg_status_pill.xml.flat",
+        "source": "io.notrack.osint-main-25:/drawable/bg_status_pill.xml"
+    },
+    {
+        "merged": "io.notrack.osint-merged_res-23:/layout_activity_main.xml.flat",
+        "source": "io.notrack.osint-main-25:/layout/activity_main.xml"
+    },
+    {
+        "merged": "io.notrack.osint-merged_res-23:/drawable_bg_status_card.xml.flat",
+        "source": "io.notrack.osint-main-25:/drawable/bg_status_card.xml"
+    },
+    {
+        "merged": "io.notrack.osint-merged_res-23:/xml_file_paths.xml.flat",
+        "source": "io.notrack.osint-main-25:/xml/file_paths.xml"
+    },
+    {
+        "merged": "io.notrack.osint-merged_res-23:/drawable_bg_action_button.xml.flat",
+        "source": "io.notrack.osint-main-25:/drawable/bg_action_button.xml"
+    },
+    {
+        "merged": "io.notrack.osint-merged_res-23:/drawable_bg_input.xml.flat",
+        "source": "io.notrack.osint-main-25:/drawable/bg_input.xml"
+    },
+    {
+        "merged": "io.notrack.osint-merged_res-23:/drawable_bg_primary_button.xml.flat",
+        "source": "io.notrack.osint-main-25:/drawable/bg_primary_button.xml"
+    }
+]

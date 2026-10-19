@@ -9,134 +9,213 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="18dp">
+        android:padding="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingBottom="24dp">
-            <TextView
-                android:id="@+id/btn_menu"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btn_hamburger"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:gravity="center"
-                android:text="☰"
-                android:textColor="#F8FAFC"
-                android:textSize="28sp"
                 android:background="@drawable/bg_action_button"
-                android:contentDescription="Open settings menu" />
-            <ImageView
-                android:layout_width="42dp"
-                android:layout_height="42dp"
-                android:layout_marginStart="12dp"
-                android:src="@drawable/ic_osint"
-                android:contentDescription="OSINT icon" />
+                android:contentDescription="Menu"
+                android:src="@android:drawable/ic_menu_sort_by_size" />
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:layout_marginStart="10dp">
+                android:layout_marginStart="12dp">
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="OSINT WORKSPACE"
                     android:textColor="#F8FAFC"
-                    android:textSize="19sp"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Clean public-source search"
+                    android:text="All-in-one OSINT suite"
                     android:textColor="#9AA8C2"
                     android:textSize="12sp" />
             </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_action_button"
+                android:contentDescription="Back"
+                android:src="@android:drawable/ic_menu_revert" />
+            <ImageButton
+                android:id="@+id/btn_forward"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/bg_action_button"
+                android:contentDescription="Forward"
+                android:src="@android:drawable/ic_menu_set_as" />
+            <ImageButton
+                android:id="@+id/btn_refresh"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/bg_action_button"
+                android:contentDescription="Refresh"
+                android:src="@android:drawable/ic_menu_rotate" />
         </LinearLayout>
 
-        <TextView
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="SEARCH"
-            android:textColor="#C4D0E5"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:layout_marginBottom="10dp" />
+            android:layout_height="4dp"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <EditText
             android:id="@+id/in_query"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:hint="Enter a name, username, domain, or keyword"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:hint="Search term, name, username, domain"
             android:singleLine="true"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
             android:background="@drawable/bg_input"
             android:textColor="#F8FAFC"
             android:textColorHint="#8290AA"
             android:paddingHorizontal="14dp" />
 
-        <TextView
+        <EditText
+            android:id="@+id/in_domain"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="6dp"
+            android:hint="Domain (optional)"
+            android:singleLine="true"
+            android:background="@drawable/bg_input"
+            android:textColor="#F8FAFC"
+            android:textColorHint="#8290AA"
+            android:paddingHorizontal="14dp" />
+
+        <EditText
+            android:id="@+id/in_url"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="6dp"
+            android:hint="URL or .onion address (optional)"
+            android:singleLine="true"
+            android:background="@drawable/bg_input"
+            android:textColor="#F8FAFC"
+            android:textColorHint="#8290AA"
+            android:paddingHorizontal="14dp" />
+
+        <EditText
+            android:id="@+id/in_file_path"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="6dp"
+            android:hint="File path (optional)"
+            android:singleLine="true"
+            android:background="@drawable/bg_input"
+            android:textColor="#F8FAFC"
+            android:textColorHint="#8290AA"
+            android:paddingHorizontal="14dp" />
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="SEARCH ENGINE"
-            android:textColor="#AEBBD2"
-            android:textStyle="bold"
-            android:textSize="11sp"
-            android:layout_marginTop="18dp"
-            android:layout_marginBottom="4dp" />
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp">
 
-        <Spinner
-            android:id="@+id/engine"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:entries="@array/engines"
-            android:backgroundTint="#40506C" />
+            <Spinner
+                android:id="@+id/spin_engine"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="2"
+                android:background="@drawable/bg_input" />
+
+            <Spinner
+                android:id="@+id/spin_mode"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_input" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/btn_search"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginTop="16dp"
-            android:text="⌕   Search public sources"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:text="Search"
             android:textAllCaps="false"
             android:textStyle="bold"
             android:background="@drawable/bg_primary_button"
             android:textColor="#06101C" />
 
+        <!-- ONE-TAP CONNECT ROW -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Search history and advanced tools are available from the menu."
-            android:textColor="#8290AA"
-            android:textSize="12sp" />
+            android:layout_marginTop="10dp"
+            android:text="ONE-TAP CONNECT"
+            android:textColor="#AEBBD2"
+            android:textStyle="bold"
+            android:textSize="10sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <Button android:id="@+id/quick_tor" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:layout_marginEnd="4dp" android:text="🧅 Tor" android:textSize="11sp" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/quick_vpn" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:layout_marginEnd="4dp" android:text="🔐 VPN" android:textSize="11sp" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/quick_dark" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="🌑 Dark" android:textSize="11sp" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <Button android:id="@+id/quick_onion" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:layout_marginEnd="4dp" android:text="🧅 .Onion list" android:textSize="11sp" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/quick_telegram" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:layout_marginEnd="4dp" android:text="✈️ Telegram bot" android:textSize="11sp" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/quick_whatsapp" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:text="📱 WhatsApp bot" android:textSize="11sp" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/status"
+            android:id="@+id/txt_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:padding="12dp"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
             android:text="Ready"
             android:textColor="#8BE9FD"
             android:textSize="12sp"
             android:background="@drawable/bg_status_card"
-            android:maxLines="3" />
+            android:maxLines="2" />
 
         <WebView
-            android:id="@+id/web"
+            android:id="@+id/web_view"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:visibility="gone"
             android:background="#FFFFFF"
-            android:layout_marginTop="12dp" />
+            android:layout_marginTop="10dp" />
     </LinearLayout>
 
     <ScrollView
-        android:layout_width="310dp"
+        android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="#111A2D"
@@ -146,48 +225,115 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="18dp">
+            android:padding="16dp">
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="WORKSPACE MENU"
+                android:text="OSINT WORKSPACE"
                 android:textColor="#F8FAFC"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:paddingTop="12dp"
-                android:paddingBottom="4dp" />
+                android:paddingBottom="16dp" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Search tools · History · Settings"
-                android:textColor="#9AA8C2"
-                android:textSize="12sp"
-                android:paddingBottom="18dp" />
+                android:text="SEARCH &amp; TOOLS"
+                android:textColor="#AEBBD2"
+                android:textStyle="bold"
+                android:textSize="11sp" />
 
-            <Button android:id="@+id/btn_mem" android:layout_width="match_parent" android:layout_height="48dp" android:text="Search history · Reuse a search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
-            <Button android:id="@+id/btn_dork" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" android:text="Google dork search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
-            <Button android:id="@+id/btn_platforms" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" android:text="Social platforms · multi-select" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
-            <Button android:id="@+id/btn_content" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" android:text="Content types · multi-select" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_search2" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="⌕  Search all sources" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_dork" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📝  Google dorks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_dorks" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🔍  Dork generator" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_images" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🖼  Reverse image search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_face" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="👤  Face search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
 
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ADVANCED SEARCH OPTIONS" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="20dp" android:layout_marginBottom="4dp" />
-            <EditText android:id="@+id/in_domain" android:layout_width="match_parent" android:layout_height="48dp" android:hint="Optional domain filter" android:singleLine="true" android:inputType="textUri" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" />
-            <EditText android:id="@+id/in_url" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp" android:hint="URL / .onion address" android:singleLine="true" android:inputType="textUri" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DORK TEMPLATE" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="14dp" android:layout_marginBottom="4dp" />
-            <Spinner android:id="@+id/dork_template" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/dork_templates" android:backgroundTint="#40506C" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="CONNECTION MODE" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="14dp" android:layout_marginBottom="4dp" />
-            <Spinner android:id="@+id/mode" android:layout_width="match_parent" android:layout_height="48dp" android:entries="@array/modes" android:backgroundTint="#40506C" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="DARK WEB &amp; VPN"
+                android:textColor="#AEBBD2"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:layout_marginTop="16dp" />
 
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="BROWSER &amp; CONNECTION" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="20dp" android:layout_marginBottom="4dp" />
-            <Button android:id="@+id/btn_web" android:layout_width="match_parent" android:layout_height="46dp" android:text="Open browser" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
-            <Button android:id="@+id/btn_dark" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Open .onion address" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
-            <Button android:id="@+id/btn_tor" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Start Tor connectivity check" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
-            <Button android:id="@+id/btn_vpn" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="VPN configuration" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_tor" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🧅  Tor browser" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_dark" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🌑  Dark web search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_vpn" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🔐  VPN / WireGuard" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_web" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🌐  Normal browser" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_onion_list" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🧅  Browse .onion sites" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
 
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="APP SETTINGS" android:textColor="#AEBBD2" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="20dp" android:layout_marginBottom="4dp" />
-            <Button android:id="@+id/btn_clear" android:layout_width="match_parent" android:layout_height="46dp" android:text="Clear search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
-            <Button android:id="@+id/btn_back" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Browser back" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
-            <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Check for updates" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="OSINT Workspace · v1.0" android:textColor="#8290AA" android:textSize="11sp" android:gravity="center" android:paddingTop="24dp" android:paddingBottom="16dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="LEAKS &amp; BREACHES"
+                android:textColor="#AEBBD2"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:layout_marginTop="16dp" />
+
+            <Button android:id="@+id/btn_leaks" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="💣  Leaks search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_social" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📱  Social media leaks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_icloud" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="☁️  iCloud leaks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_drive" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📁  Google Drive leaks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_cloud" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="☁️  Cloud leaks (AWS/GCP/Azure)" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_telecom" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📞  Telecom / SIM leaks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_email" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📧  Email leak check" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_dating" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="❤️  Dating app leaks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_hotel" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🏨  OYO / Hotel leaks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ADULT &amp; STREAMING"
+                android:textColor="#AEBBD2"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:layout_marginTop="16dp" />
+
+            <Button android:id="@+id/btn_porn" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🔞  Adult / Porn search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_cams" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📹  Cam / Stream leaks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_escort" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="💃  Escort / Dating sites" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="TOOLS"
+                android:textColor="#AEBBD2"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:layout_marginTop="16dp" />
+
+            <Button android:id="@+id/btn_brute" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🔑  Brute force / wordlist" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_otp" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📲  OTP bypass" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_telegram_bot" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="✈️  Telegram bot" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_whatsapp_bot" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📱  WhatsApp bot" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="APP"
+                android:textColor="#AEBBD2"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:layout_marginTop="16dp" />
+
+            <Button android:id="@+id/btn_clear" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🗑  Clear inputs" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🔄  Check for updates" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF" />
+            <Button android:id="@+id/btn_playprotect" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🛡  Bypass Play Protect" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="OSINT Workspace · v2.0"
+                android:textColor="#8290AA"
+                android:textSize="11sp"
+                android:gravity="center"
+                android:paddingTop="20dp"
+                android:paddingBottom="16dp" />
         </LinearLayout>
     </ScrollView>
 </androidx.drawerlayout.widget.DrawerLayout>
