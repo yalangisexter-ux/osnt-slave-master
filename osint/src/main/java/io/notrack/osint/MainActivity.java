@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
         web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(false);
-        web.loadUrl("https://www.google.com");
+        web.setVisibility(android.view.View.GONE);
         findViewById(R.id.btn_update).setOnClickListener(v -> checkForUpdates());
         findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
         findViewById(R.id.btn_dork).setOnClickListener(v -> doDorkSearch());
@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
         pendingTorUrl = url;
         torModeEnabled = true;
         if (torActive) {
+            web.setVisibility(android.view.View.VISIBLE);
             web.loadUrl(url);
             status.setText("In-app Tor browser active. Verify connection at check.torproject.org.");
             return;
@@ -153,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
                     torActive = connected;
                     if (connected) {
                         status.setText("Tor SOCKS proxy ready. Loading through Tor…");
+                        web.setVisibility(android.view.View.VISIBLE);
                         web.loadUrl(pendingTorUrl);
                     } else {
                         torModeEnabled = false;
@@ -429,6 +431,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void browse(String url) {
+        web.setVisibility(android.view.View.VISIBLE);
         web.loadUrl(url);
         if (status != null) status.setText("Opening " + Uri.parse(url).getHost());
     }
