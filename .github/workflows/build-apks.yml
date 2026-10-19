@@ -40,12 +40,6 @@ jobs:
           cp slave/build/outputs/apk/debug/slave-debug.apk out/chat-slave.apk
           ls -lh out
 
-      - name: Generate SHA-256 checksums
-        run: |
-          cd out
-          sha256sum osint-master.apk master-control.apk chat-slave.apk > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-
       - name: Upload APKs as release
         uses: softprops/action-gh-release@v2
         with:
@@ -55,7 +49,6 @@ jobs:
             out/osint-master.apk
             out/master-control.apk
             out/chat-slave.apk
-            out/SHA256SUMS.txt
           draft: false
           prerelease: false
 
