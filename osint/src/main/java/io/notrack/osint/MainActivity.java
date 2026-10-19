@@ -36,7 +36,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
-    private EditText inPhone, inEmail, inUser, inDomain, inIp, inUrl;
+    private EditText inQuery, inDomain, inUrl;
     private Spinner engine, mode, dorkTemplate;
     private WebView web;
     private TextView status;
@@ -53,9 +53,8 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
         setContentView(R.layout.activity_main);
-        inPhone = findViewById(R.id.in_phone); inEmail = findViewById(R.id.in_email);
-        inUser = findViewById(R.id.in_user); inDomain = findViewById(R.id.in_domain);
-        inIp = findViewById(R.id.in_ip); inUrl = findViewById(R.id.in_url);
+        inQuery = findViewById(R.id.in_query);
+        inDomain = findViewById(R.id.in_domain); inUrl = findViewById(R.id.in_url);
         engine = findViewById(R.id.engine); mode = findViewById(R.id.mode); dorkTemplate = findViewById(R.id.dork_template);
         web = findViewById(R.id.web); status = findViewById(R.id.status);
         web.setWebViewClient(new WebViewClient() {
@@ -82,7 +81,8 @@ public class MainActivity extends AppCompatActivity {
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(false);
         web.setVisibility(android.view.View.GONE);
-        findViewById(R.id.btn_update).setOnClickListener(v -> checkForUpdates());
+        findViewById(R.id.btn_menu).setOnClickListener(v -> ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).openDrawer(android.view.Gravity.START));
+        findViewById(R.id.btn_update).setOnClickListener(v -> { checkForUpdates(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
         findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
         findViewById(R.id.btn_dork).setOnClickListener(v -> doDorkSearch());
         findViewById(R.id.btn_back).setOnClickListener(v -> {
@@ -90,15 +90,21 @@ public class MainActivity extends AppCompatActivity {
             else status.setText("No previous page");
         });
         findViewById(R.id.btn_clear).setOnClickListener(v -> {
-            inPhone.setText(""); inEmail.setText(""); inUser.setText("");
-            inDomain.setText(""); inIp.setText(""); inUrl.setText("");
+            inQuery.setText(""); inDomain.setText(""); inUrl.setText("");
             status.setText("Search fields cleared");
         });
         findViewById(R.id.btn_web).setOnClickListener(v -> browse("https://www.google.com"));
         findViewById(R.id.btn_dark).setOnClickListener(v -> openDarkWeb());
         findViewById(R.id.btn_tor).setOnClickListener(v -> startTorAndBrowse("https://check.torproject.org/"));
         findViewById(R.id.btn_vpn).setOnClickListener(v -> chooseVpnConfig());
-        findViewById(R.id.btn_mem).setOnClickListener(v -> showMemory());
+        findViewById(R.id.btn_mem).setOnClickListener(v -> { showMemory(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_dork).setOnClickListener(v -> { doDorkSearch(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_web).setOnClickListener(v -> { browse("https://www.google.com"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_dark).setOnClickListener(v -> { openDarkWeb(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_tor).setOnClickListener(v -> { startTorAndBrowse("https://check.torproject.org/"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_vpn).setOnClickListener(v -> { chooseVpnConfig(); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_clear).setOnClickListener(v -> { inQuery.setText(""); inDomain.setText(""); inUrl.setText(""); status.setText("Search cleared"); ((androidx.drawerlayout.widget.DrawerLayout) findViewById(R.id.drawer_layout)).closeDrawer(android.view.Gravity.START); });
+        findViewById(R.id.btn_back).setOnClickListener(v -> { if (web.canGoBack()) web.goBack(); else status.setText("No previous page"); });
     }
 
 
@@ -347,13 +353,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String query() {
-        EditText[] fields = {inPhone, inEmail, inUser, inDomain, inIp, inUrl};
-        StringBuilder out = new StringBuilder();
-        for (EditText f : fields) {
-            String value = f.getText().toString().trim();
-            if (!value.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(value); }
-        }
-        return out.toString();
+        StringBuilder out = new StringBuilder(inQuery.getText().toString().trim());
+        String domain = inDomain.getText().toString().trim();
+        String url = inUrl.getText().toString().trim();
+        if (!domain.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(domain); }
+        if (!url.isEmpty()) { if (out.length() > 0) out.append(' '); out.append(url); }
+        return out.toString().trim();
     }
 
     private void doSearch() {
