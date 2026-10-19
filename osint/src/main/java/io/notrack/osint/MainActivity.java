@@ -361,6 +361,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean route(Uri uri) {
+        // In Tor mode, never hand requests to an external browser: that could leak the destination outside Tor.
+        if (torModeEnabled) return false;
         String host = uri.getHost();
         if (host != null && (host.equalsIgnoreCase("accounts.google.com") ||
             host.equalsIgnoreCase("myaccount.google.com") || host.equalsIgnoreCase("consent.google.com"))) {
