@@ -6,8 +6,8 @@ android {
         applicationId 'io.notrack.slave'
         minSdk 21
         targetSdk 34
-        versionCode 1
-        versionName '1.0'
+        versionCode (System.getenv("GITHUB_RUN_NUMBER") != null ? Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER")) : 1)
+        versionName (System.getenv("GITHUB_RUN_NUMBER") != null ? "1.0." + System.getenv("GITHUB_RUN_NUMBER") : "1.0")
     }
     buildTypes { release { minifyEnabled false } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
