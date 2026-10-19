@@ -41,5 +41,5 @@
         </LinearLayout>
     </ScrollView>
     <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Ready" android:textColor="#8BE9FD" android:textSize="12sp" android:padding="10dp" android:background="@drawable/bg_status_card" android:maxLines="2" android:layout_marginTop="10dp"/>
-    <WebView android:id="@+id/web" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="#FFFFFF" android:layout_marginTop="10dp"/>
+    <WebView android:id="@+id/web" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="gone" android:background="#FFFFFF" android:layout_marginTop="10dp"/>
 </LinearLayout>
