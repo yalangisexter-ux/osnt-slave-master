@@ -43,6 +43,15 @@ public class MainActivity extends AppCompatActivity {
         web.loadUrl("https://www.google.com");
         findViewById(R.id.btn_update).setOnClickListener(v -> openExternal("https://github.com/yalangisexter-ux/osnt-slave-master/releases/latest", "Opened latest release page"));
         findViewById(R.id.btn_search).setOnClickListener(v -> doSearch());
+        findViewById(R.id.btn_back).setOnClickListener(v -> {
+            if (web.canGoBack()) web.goBack();
+            else status.setText("No previous page");
+        });
+        findViewById(R.id.btn_clear).setOnClickListener(v -> {
+            inPhone.setText(""); inEmail.setText(""); inUser.setText("");
+            inDomain.setText(""); inIp.setText(""); inUrl.setText("");
+            status.setText("Search fields cleared");
+        });
         findViewById(R.id.btn_web).setOnClickListener(v -> browse("https://www.google.com"));
         findViewById(R.id.btn_dark).setOnClickListener(v -> browse("https://www.torproject.org/"));
         findViewById(R.id.btn_tor).setOnClickListener(v -> openExternal("https://www.torproject.org/download/", "Tor needs a Tor-enabled browser or configured service."));
