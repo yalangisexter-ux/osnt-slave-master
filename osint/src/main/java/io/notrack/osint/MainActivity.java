@@ -134,13 +134,18 @@ public class MainActivity extends AppCompatActivity {
     private final ServiceConnection torConnection = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName name, IBinder binder) {
             new Thread(() -> {
-                long deadline = System.currentTimeMillis() + 60000L;
+                long deadline = System.currentTimeMillis() + 90000L;
                 boolean ready = false;
                 while (System.currentTimeMillis() < deadline && !isFinishing()) {
                     try (Socket socket = new Socket()) {
-                        socket.connect(new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT), 700);
-                        ready = true;
-                        break;
+                        socket.connect(new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT), 1500);
+                        socket.setSoTimeout(1500);
+                        socket.getOutputStream().write(new byte[] {0x05, 0x01, 0x00});
+                        byte[] handshake = new byte[2];
+                        int read = socket.getInputStream().read(handshake);
+                        ready = read == 2 && handshake[0] == 0x05 && handshake[1] == 0x00;
+                        if (ready) break;
+                        throw new java.io.IOException("SOCKS5 handshake not ready");
                     } catch (Exception ignored) {
                         try { Thread.sleep(500); } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
@@ -153,13 +158,13 @@ public class MainActivity extends AppCompatActivity {
                     torStarting = false;
                     torActive = connected;
                     if (connected) {
-                        status.setText("Tor SOCKS proxy ready. Loading through Tor…");
+                        status.setText("Tor SOCKS5 proxy is responding. Checking Tor network…");
                         web.setVisibility(android.view.View.VISIBLE);
                         web.loadUrl(pendingTorUrl);
                     } else {
                         torModeEnabled = false;
-                        status.setText("Tor did not start. Direct-network fallback was blocked. Retry or use Tor Browser.");
-                        Toast.makeText(MainActivity.this, "Could not start Tor", Toast.LENGTH_LONG).show();
+                        status.setText("Tor SOCKS proxy did not become ready. Check internet access, wait, then retry. No direct-network fallback was used.");
+                        Toast.makeText(MainActivity.this, "Tor did not become ready", Toast.LENGTH_LONG).show();
                     }
                 });
             }).start();
@@ -201,8 +206,9 @@ public class MainActivity extends AppCompatActivity {
             }
             Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", TOR_SOCKS_PORT));
             connection = (HttpURLConnection) new URL(url).openConnection(proxy);
-            connection.setConnectTimeout(15000);
-            connection.setReadTimeout(20000);
+            connection.setConnectTimeout(60000);
+            connection.setReadTimeout(60000);
+            connection.setRequestProperty("User-Agent", "OSINT-Workspace/1.0");
             connection.setInstanceFollowRedirects(true);
             connection.setRequestMethod(method);
             for (Map.Entry<String, String> header : headers.entrySet()) {
@@ -246,7 +252,13 @@ public class MainActivity extends AppCompatActivity {
             }
             return new WebResourceResponse(mime, encoding, code, connection.getResponseMessage(), responseHeaders, new ByteArrayInputStream(body.toByteArray()));
         } catch (Exception e) {
-            return errorResponse(502, "Tor request failed: " + e.getClass().getSimpleName());
+            String detail = e instanceof java.net.SocketTimeoutException
+                ? "Tor network timed out while connecting. The local proxy exists, but the Tor circuit may not be ready or the site may be slow."
+                : "Tor request failed: " + e.getClass().getSimpleName();
+            MAIN.post(() -> {
+                if (torModeEnabled && !isFinishing()) status.setText(detail);
+            });
+            return errorResponse(502, detail);
         } finally {
             if (connection != null) connection.disconnect();
         }
