@@ -483,11 +483,37 @@ public class MainActivity extends AppCompatActivity {
 
     private void showMemory() {
         String history = getSharedPreferences(PREFS, MODE_PRIVATE).getString(HISTORY, "");
-        if (history.isEmpty()) history = "No saved searches yet.";
-        new AlertDialog.Builder(this).setTitle("Search memory").setMessage(history)
+        if (history.trim().isEmpty()) {
+            new AlertDialog.Builder(this).setTitle("Search history")
+                .setMessage("No saved searches yet. Run a search and it will appear here.")
+                .setPositiveButton("Close", null).show();
+            return;
+        }
+        String[] items = history.split("\\n");
+        new AlertDialog.Builder(this).setTitle("Choose a search to reuse")
+            .setItems(items, (dialog, which) -> {
+                String item = items[which];
+                int marker = item.indexOf("]: ");
+                String selected = marker >= 0 ? item.substring(marker + 3).trim() : item.trim();
+                inQuery.setText(selected);
+                inQuery.setSelection(inQuery.getText().length());
+                if (item.startsWith("Google Dork")) engine.setSelection(0);
+                else {
+                    int bracket = item.indexOf(" [");
+                    String engineName = bracket > 0 ? item.substring(0, bracket) : "";
+                    for (int i = 0; i < engine.getCount(); i++) {
+                        if (engineName.equals(String.valueOf(engine.getItemAtPosition(i)))) {
+                            engine.setSelection(i);
+                            break;
+                        }
+                    }
+                }
+                status.setText("Loaded saved search. Tap Search to run it again.");
+            })
             .setPositiveButton("Close", null)
             .setNegativeButton("Clear history", (d, w) ->
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(HISTORY).apply()).show();
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(HISTORY).apply())
+            .show();
     }
 
     private String enc(String value) {
