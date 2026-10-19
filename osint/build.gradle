@@ -4,7 +4,7 @@ android {
     compileSdk 34
     defaultConfig {
         applicationId 'io.notrack.osint'
-        minSdk 21
+        minSdk 24
         targetSdk 34
         versionCode 1
         versionName '1.0'
@@ -16,4 +16,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    // Native Tor daemon library; Onion Browser itself is iOS-only and is not an Android dependency.
+    implementation 'info.guardianproject:tor-android:0.4.9.13.2'
+    implementation 'info.guardianproject:jtorctl:0.4.5.7'
 }
