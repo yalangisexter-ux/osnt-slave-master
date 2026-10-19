@@ -1,31 +1,27 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="#080D18" android:padding="16dp">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="PEER CHAT" android:textColor="#F8FAFC" android:textSize="24sp"
-        android:textStyle="bold" android:letterSpacing="0.04"/>
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Messages to a configured Master peer" android:textColor="#94A3B8"
-        android:textSize="12sp" android:layout_marginBottom="12dp"/>
-    <Button android:id="@+id/btn_update" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Check for updates" android:backgroundTint="#1E293B" android:textColor="#E2E8F0"/>
-    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Starting listener…" android:textColor="#93C5FD" android:textSize="12sp"
-        android:padding="10dp" android:background="#111827" android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
-    <EditText android:id="@+id/peer_ip" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:hint="Master IP / hostname" android:inputType="textUri" android:singleLine="true"
-        android:backgroundTint="#475569" android:textColor="#F8FAFC" android:textColorHint="#94A3B8"
-        android:padding="10dp" android:layout_marginBottom="8dp"/>
-    <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:background="#111827" android:divider="#263244" android:dividerHeight="1dp"
-        android:padding="4dp" android:clipToPadding="false"/>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="10dp">
-        <EditText android:id="@+id/input" android:layout_width="0dp" android:layout_weight="1"
-            android:layout_height="wrap_content" android:hint="Write a message…" android:inputType="textCapSentences|textMultiLine"
-            android:maxLines="3" android:backgroundTint="#475569" android:textColor="#F8FAFC"
-            android:textColorHint="#94A3B8" android:padding="10dp"/>
-        <Button android:id="@+id/btn_send" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Send" android:backgroundTint="#059669" android:textColor="#FFFFFF"/>
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="#0B1020" android:padding="16dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingBottom="16dp">
+        <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_chat" android:contentDescription="Chat icon" android:layout_marginEnd="12dp"/>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="PEER CHAT" android:textColor="#F8FAFC" android:textSize="21sp" android:textStyle="bold"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Securely configure your Master peer" android:textColor="#9AA8C2" android:textSize="12sp"/>
+        </LinearLayout>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="CHAT" android:textColor="#6EE7B7" android:textSize="11sp" android:textStyle="bold" android:background="@drawable/bg_status_pill" android:paddingHorizontal="10dp" android:paddingVertical="6dp"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_surface_card" android:padding="12dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MASTER PEER" android:textColor="#C4D0E5" android:textStyle="bold" android:textSize="12sp" android:layout_marginBottom="8dp"/>
+        <EditText android:id="@+id/peer_ip" android:layout_width="match_parent" android:layout_height="50dp" android:hint="Master IP / hostname" android:inputType="textUri" android:singleLine="true" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp"/>
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Starting listener…" android:textColor="#8BE9FD" android:textSize="12sp" android:padding="12dp" android:background="@drawable/bg_status_card" android:layout_marginTop="10dp"/>
+    </LinearLayout>
+    <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none" android:layout_marginTop="10dp">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/btn_update" android:layout_width="wrap_content" android:layout_height="44dp" android:text="Update app" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#C5F6FF"/>
+        </LinearLayout>
+    </HorizontalScrollView>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MESSAGES" android:textColor="#C4D0E5" android:textStyle="bold" android:textSize="12sp" android:layout_marginTop="14dp" android:layout_marginBottom="8dp"/>
+    <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@drawable/bg_surface_card" android:divider="#293650" android:dividerHeight="1dp" android:padding="8dp" android:clipToPadding="false"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_surface_card" android:padding="8dp" android:layout_marginTop="10dp">
+        <EditText android:id="@+id/input" android:layout_width="0dp" android:layout_weight="1" android:layout_height="50dp" android:hint="Write a message…" android:inputType="textCapSentences|textMultiLine" android:maxLines="3" android:background="@drawable/bg_input" android:textColor="#F8FAFC" android:textColorHint="#8290AA" android:paddingHorizontal="12dp"/>
+        <Button android:id="@+id/btn_send" android:layout_width="wrap_content" android:layout_height="50dp" android:text="Send  ➤" android:textAllCaps="false" android:textStyle="bold" android:background="@drawable/bg_primary_button" android:textColor="#06101C" android:layout_marginStart="8dp"/>
     </LinearLayout>
 </LinearLayout>
