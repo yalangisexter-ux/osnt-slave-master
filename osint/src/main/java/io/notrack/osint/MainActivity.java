@@ -210,6 +210,17 @@ public class MainActivity extends AppCompatActivity {
             int code = connection.getResponseCode();
             InputStream stream = code >= 400 ? connection.getErrorStream() : connection.getInputStream();
             if (stream == null) stream = new ByteArrayInputStream(new byte[0]);
+            // Buffer the response before disconnecting HttpURLConnection; otherwise WebView may read a closed stream.
+            java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int count;
+            int total = 0;
+            while ((count = stream.read(buffer)) != -1) {
+                total += count;
+                if (total > 20 * 1024 * 1024) return errorResponse(502, "Response exceeded the 20 MB in-app browser limit.");
+                body.write(buffer, 0, count);
+            }
+            stream.close();
             String contentType = connection.getContentType();
             String mime = "text/plain";
             String encoding = "UTF-8";
@@ -224,10 +235,12 @@ public class MainActivity extends AppCompatActivity {
             Map<String, String> responseHeaders = new HashMap<>();
             for (Map.Entry<String, java.util.List<String>> entry : connection.getHeaderFields().entrySet()) {
                 if (entry.getKey() != null && entry.getValue() != null && !entry.getValue().isEmpty()) {
-                    responseHeaders.put(entry.getKey(), String.join(", ", entry.getValue()));
+                    if (!entry.getKey().equalsIgnoreCase("Content-Length") && !entry.getKey().equalsIgnoreCase("Content-Encoding") && !entry.getKey().equalsIgnoreCase("Transfer-Encoding")) {
+                        responseHeaders.put(entry.getKey(), String.join(", ", entry.getValue()));
+                    }
                 }
             }
-            return new WebResourceResponse(mime, encoding, code, connection.getResponseMessage(), responseHeaders, stream);
+            return new WebResourceResponse(mime, encoding, code, connection.getResponseMessage(), responseHeaders, new ByteArrayInputStream(body.toByteArray()));
         } catch (Exception e) {
             return errorResponse(502, "Tor request failed: " + e.getClass().getSimpleName());
         } finally {
