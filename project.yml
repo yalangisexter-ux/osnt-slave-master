@@ -1,0 +1,26 @@
+name: OSINTiOS
+options:
+  bundleIdPrefix: io.notrack
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGNING_ALLOWED: "NO"
+targets:
+  OSINTiOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOS/OSINTiOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.notrack.osint.ios
+        PRODUCT_NAME: OSINT-Workspace
+        INFOPLIST_KEY_CFBundleDisplayName: OSINT Workspace
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: NO
+        GENERATE_INFOPLIST_FILE: YES
+        SUPPORTS_MACCATALYST: NO
