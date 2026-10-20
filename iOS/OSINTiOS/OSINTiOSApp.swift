@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import UIKit
 
 @main
 struct OSINTiOSApp: App {
@@ -20,7 +21,8 @@ struct ContentView: View {
     @State private var status = "Ready"
     @State private var showBrowser = false
     @State private var showSettings = false
-    @State private var apiKeys: [String: String] = [:]
+    @AppStorage("osint_hibp_api_key") private var hibpApiKey = ""
+    @AppStorage("osint_leaksio_api_key") private var leaksIoApiKey = ""
     @State private var reportText = ""
     @State private var showShare = false
 
@@ -257,7 +259,10 @@ struct ContentView: View {
     }
 
     private func keyBinding(_ name: String) -> Binding<String> {
-        Binding(get: { apiKeys[name, default: ""] }, set: { apiKeys[name] = $0 })
+        if name == "hibp" {
+            return Binding(get: { hibpApiKey }, set: { hibpApiKey = $0 })
+        }
+        return Binding(get: { leaksIoApiKey }, set: { leaksIoApiKey = $0 })
     }
 
     private func prepareReport() {
