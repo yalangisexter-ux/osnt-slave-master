@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int IMAGE_PICK_REQUEST = 1003;
     private static final int REPORT_EXPORT_REQUEST = 1005;
     private String pendingEvidenceReport = "";
+    private String pendingHtmlReport = "";
     private static final int PERMISSION_STORAGE = 2001;
     private static final String PREFS = "osint_prefs";
 
@@ -533,24 +534,37 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void exportEvidenceReport() {
-        StringBuilder report = new StringBuilder();
-        report.append("CYBER ABUSE / IMPERSONATION EVIDENCE SUMMARY\n");
-        report.append("Generated: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).format(new Date())).append("\n");
-        report.append("Case/subject label: ").append(fieldText(inQuery)).append("\n");
-        report.append("Known username/organization: ").append(fieldText(inDomain)).append("\n");
-        report.append("Source/profile URL: ").append(fieldText(inUrl)).append("\n");
-        report.append("Emails supplied: ").append(fieldText(inEmails)).append("\n");
-        report.append("Phones supplied: ").append(fieldText(inPhones)).append("\n");
-        report.append("Known social accounts: ").append(fieldText(inSocialAccounts)).append("\n\n");
-        report.append("SOURCE REVIEW\nRecord exact source URL, collection time/timezone, page/account identifier, and verification steps. Search results are leads, not proof of identity.\n\n");
-        report.append("CHAIN OF CUSTODY\nCollector: ____________________\nCollection time/timezone: ____________________\nTransfer/access log: ____________________\nNotes: ____________________\n\n");
-        report.append("REPORTING\nIndia National Cyber Crime Reporting Portal: https://cybercrime.gov.in/\nStopNCII.org: https://stopncii.org/\n\n");
-        report.append("This summary is not a legal opinion or certificate of admissibility. Preserve original files and metadata and ask the investigating authority/legal counsel about applicable electronic-record requirements.\n");
-        pendingEvidenceReport = report.toString();
+        StringBuilder htmlReport = new StringBuilder();
+        htmlReport.append("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>OSINT Investigation Report</title>")
+            .append("<style>body{font:16px Arial,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px;color:#182235}h1,h2{color:#174a70}section{border:1px solid #ccd5df;border-radius:8px;padding:14px;margin:12px 0}a{overflow-wrap:anywhere}</style></head><body>")
+            .append("<h1>OSINT Investigation Report</h1><p>Generated: ")
+            .append(escapeHtml(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).format(new Date())))
+            .append("</p><section><h2>Case details</h2><p>Case/subject label: ").append(escapeHtml(fieldText(inQuery)))
+            .append("</p><p>Known username/organization: ").append(escapeHtml(fieldText(inDomain)))
+            .append("</p><p>Source/profile URL: ").append(escapeHtml(fieldText(inUrl)))
+            .append("</p><p>Emails supplied: ").append(escapeHtml(fieldText(inEmails)))
+            .append("</p><p>Phones supplied: ").append(escapeHtml(fieldText(inPhones)))
+            .append("</p><p>Known social accounts: ").append(escapeHtml(fieldText(inSocialAccounts)))
+            .append("</p></section>");
+        if (!pendingHtmlReport.isEmpty()) {
+            int bodyStart = pendingHtmlReport.toLowerCase(Locale.US).indexOf("<body>");
+            int bodyEnd = pendingHtmlReport.toLowerCase(Locale.US).lastIndexOf("</body>");
+            if (bodyStart >= 0 && bodyEnd > bodyStart) {
+                htmlReport.append("<section><h2>One-tap search workspace</h2><p>These are prepared source links, not automatically collected provider results. Open each source, verify matches manually, and record the exact URL and collection time.</p>")
+                    .append(pendingHtmlReport.substring(bodyStart + 6, bodyEnd)).append("</section>");
+            }
+        } else {
+            htmlReport.append("<section><h2>Search workspace</h2><p>Run One-tap Search first to include the prepared source links in this report.</p>")
+                .append("<a href=\"https://www.google.com/\">Google</a> · <a href=\"https://www.bing.com/\">Bing</a> · <a href=\"https://duckduckgo.com/\">DuckDuckGo</a> · <a href=\"https://search.brave.com/\">Brave</a></section>");
+        }
+        htmlReport.append("<section><h2>Source review and chain of custody</h2><p>Exact source URL: ____________________</p><p>Collection time/timezone: ____________________</p><p>Account/page identifier: ____________________</p><p>Collector and transfer/access log: ____________________</p><p>Notes: ____________________</p></section>")
+            .append("<section><h2>Reporting resources</h2><a href=\"https://cybercrime.gov.in/\">India National Cyber Crime Reporting Portal</a><br><a href=\"https://stopncii.org/\">StopNCII.org</a><br><a href=\"https://haveibeenpwned.com/\">Have I Been Pwned</a></section>")
+            .append("<p>Public search results are leads, not proof of identity or conduct. Do not infer sensitive intimate/adult activity from a name match. This report does not fetch private data or certify evidence. Preserve original evidence and metadata separately.</p></body></html>");
+        pendingEvidenceReport = htmlReport.toString();
         Intent create = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         create.addCategory(Intent.CATEGORY_OPENABLE);
-        create.setType("text/plain");
-        create.putExtra(Intent.EXTRA_TITLE, "cyber-evidence-summary-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".txt");
+        create.setType("text/html");
+        create.putExtra(Intent.EXTRA_TITLE, "osint-investigation-report-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".html");
         startActivityForResult(create, REPORT_EXPORT_REQUEST);
     }
 
@@ -638,8 +652,9 @@ public class MainActivity extends AppCompatActivity {
             .append("<a href='https://support.google.com/websearch/answer/6302812'>Google content removal guidance</a><br><br>")
             .append("<a href='https://haveibeenpwned.com/'>Have I Been Pwned</a></div>")
             .append("<p class='muted'>Important: public search results do not establish that a person owns an account or engaged in adult activity. Do not use search snippets as proof; preserve original URLs, timestamps and context.</p></body></html>");
+        pendingHtmlReport = html.toString();
         web.setVisibility(View.VISIBLE);
-        web.loadDataWithBaseURL("https://www.google.com/", html.toString(), "text/html", "UTF-8", null);
+        web.loadDataWithBaseURL("https://www.google.com/", pendingHtmlReport, "text/html", "UTF-8", null);
         status.setText("One-tap page prepared: " + links.size() + " public-source links. Provider results open individually; Tor/VPN status is shown separately.");
     }
 
@@ -1808,7 +1823,7 @@ public class MainActivity extends AppCompatActivity {
             try (OutputStream out = getContentResolver().openOutputStream(uri)) {
                 if (out == null) throw new IOException("Unable to create report file");
                 out.write(pendingEvidenceReport.getBytes(StandardCharsets.UTF_8));
-                status.setText("Evidence summary exported. Preserve original files separately.");
+                status.setText("HTML investigation report saved. Provider results are not automatically scraped; preserve original evidence separately.");
             } catch (Exception e) {
                 status.setText("Report export failed: " + e.getMessage());
             }
