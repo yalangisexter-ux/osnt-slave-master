@@ -1,0 +1,63 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          xcode-select -p
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      - name: Build iOS Simulator app (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project OSINTiOS.xcodeproj \
+            -scheme OSINTiOS \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package simulator build
+        run: |
+          mkdir -p out
+          APP_PATH="build/DerivedData/Build/Products/Release-iphonesimulator/OSINT-Workspace.app"
+          test -d "$APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" out/OSINT-Workspace-iOS-Simulator.zip
+          shasum -a 256 out/OSINT-Workspace-iOS-Simulator.zip | tee out/SHA256SUMS.txt
+
+      - name: Upload iOS build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osint-ios-simulator-${{ github.run_number }}
+          path: out/*
+          if-no-files-found: error
+          retention-days: 14
