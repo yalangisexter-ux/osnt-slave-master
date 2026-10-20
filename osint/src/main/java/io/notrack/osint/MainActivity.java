@@ -604,8 +604,11 @@ public class MainActivity extends AppCompatActivity {
         addSearchLink(links, "Non-consensual image abuse resources", "\"non-consensual intimate image\" OR \"image-based abuse\" OR sextortion");
         addSearchLink(links, "Public repost / stolen-content mentions", identity + " (\"stolen photo\" OR \"fake account\" OR repost)");
         addSearchLink(links, "Public breach / exposure mentions", identity + " (breach OR exposed OR \"data leak\" OR compromised)");
-        addSearchLink(links, "Public adult-site results (not identity verification)", identity + " site:pornhub.com OR site:xvideos.com OR site:xnxx.com");
-        addSearchLink(links, "Public escort-ad scam indicators", identity + " (\"escort scam\" OR blackmail OR extortion)");
+        addSearchLink(links, "Adult-site impersonation / non-consensual-content reporting", identity + " (impersonation OR non-consensual OR stolen images OR extortion)");
+        addSearchLink(links, "Dating / romance scam reports", identity + " (dating scam OR romance scam OR catfish OR payment demand)");
+        addSearchLink(links, "Escort-ad fraud / extortion indicators", identity + " (fake escort ad OR escort scam OR extortion OR blackmail)");
+        addSearchLink(links, "Prostitution-related exploitation / trafficking resources", "site:unodc.org OR site:polarisproject.org trafficking exploitation reporting");
+        addSearchLink(links, "Cam-platform impersonation / abuse reports", identity + " (impersonation OR stolen content OR extortion OR blackmail)");
         addSearchLink(links, "Public documents / PDFs", identity + " (filetype:pdf OR filetype:doc OR filetype:docx)");
         addSearchLink(links, "Public code / technical mentions", identity + " site:github.com");
         addSearchLink(links, "Have I Been Pwned — provider check", "https://haveibeenpwned.com/");
@@ -643,7 +646,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (selectedEvidenceImage != null) {
             html.append("<div class='card'><b>Evidence image selected</b><p class='muted'>The image is not uploaded automatically. Review the provider's privacy terms before choosing to submit it.</p>")
-                .append("<a href='https://lens.google.com/'>Google Lens</a> · <a href='https://www.bing.com/visualsearch'>Bing Visual Search</a></div>");
+                .append("<a href='https://lens.google.com/'>Google Lens</a> · <a href='https://www.bing.com/visualsearch'>Bing Visual Search</a> · <a href='https://tineye.com/'>TinEye</a> · <a href='https://yandex.com/images/'>Yandex Images</a></div>");
         }
         html.append("<h3>Dark web / Tor</h3><div class='card'><p class='muted'>No general-purpose dark-web search API is configured. The app cannot honestly return all .onion content in this page. Use Tor only when its connection is verified, then manually open a vetted, known .onion address.</p>")
             .append("<a href='https://www.torproject.org/'>Tor Project</a> · <a href='https://check.torproject.org/'>Check Tor connection</a></div>");
