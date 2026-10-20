@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build-ios:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,6 +33,31 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate --spec project.yml
 
+      - name: Build unsigned iPhone device app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project OSINTiOS.xcodeproj \
+            -scheme OSINTiOS \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DeviceDerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package unsigned IPA for sideload signing
+        run: |
+          set -euo pipefail
+          APP_PATH="build/DeviceDerivedData/Build/Products/Release-iphoneos/OSINT-Workspace.app"
+          test -d "$APP_PATH"
+          mkdir -p out/ipa/Payload
+          ditto "$APP_PATH" out/ipa/Payload/OSINT-Workspace.app
+          (cd out/ipa && zip --symlinks -r ../OSINT-Workspace-unsigned.ipa Payload)
+          shasum -a 256 out/OSINT-Workspace-unsigned.ipa | tee out/SHA256SUMS.txt
+
       - name: Build iOS Simulator app (unsigned)
         run: |
           set -o pipefail
@@ -42,22 +67,25 @@ jobs:
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build/DerivedData \
+            -derivedDataPath build/SimulatorDerivedData \
             CODE_SIGNING_ALLOWED=NO \
             build
 
       - name: Package simulator build
         run: |
-          mkdir -p out
-          APP_PATH="build/DerivedData/Build/Products/Release-iphonesimulator/OSINT-Workspace.app"
+          set -euo pipefail
+          APP_PATH="build/SimulatorDerivedData/Build/Products/Release-iphonesimulator/OSINT-Workspace.app"
           test -d "$APP_PATH"
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" out/OSINT-Workspace-iOS-Simulator.zip
-          shasum -a 256 out/OSINT-Workspace-iOS-Simulator.zip | tee out/SHA256SUMS.txt
+          shasum -a 256 out/OSINT-Workspace-iOS-Simulator.zip >> out/SHA256SUMS.txt
 
-      - name: Upload iOS build artifact
+      - name: Upload iOS build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: osint-ios-simulator-${{ github.run_number }}
-          path: out/*
+          name: osint-ios-unsigned-ipa-and-simulator-${{ github.run_number }}
+          path: |
+            out/OSINT-Workspace-unsigned.ipa
+            out/OSINT-Workspace-iOS-Simulator.zip
+            out/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
