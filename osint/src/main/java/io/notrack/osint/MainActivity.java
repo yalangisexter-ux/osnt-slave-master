@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REPORT_EXPORT_REQUEST = 1005;
     private String pendingEvidenceReport = "";
     private String pendingHtmlReport = "";
+    boolean oneTapResultsVisible;
     private static final int PERMISSION_STORAGE = 2001;
     private static final String PREFS = "osint_prefs";
 
@@ -162,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 String url = req.getUrl().toString();
+                if (url.startsWith("http") && oneTapResultsVisible) { try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))); } catch (Exception ignored) {} return true; }
                 if (url.contains(".onion")) { startTorAndBrowse(url); return true; }
                 if (url.startsWith("intent://")) {
                     try { startActivity(Intent.parseUri(url, Intent.URI_INTENT_SCHEME)); return true; }
@@ -626,7 +628,7 @@ public class MainActivity extends AppCompatActivity {
 
         final int total = jobs.size();
         progressBar.setVisibility(View.VISIBLE); progressBar.setIndeterminate(false); progressBar.setMax(Math.max(1, total)); progressBar.setProgress(0);
-        web.setVisibility(View.VISIBLE); web.setVerticalScrollBarEnabled(true); web.setHorizontalScrollBarEnabled(false);
+        oneTapResultsVisible = true; web.setBackgroundColor(0xFF0b1020); web.setVisibility(View.VISIBLE); web.setVerticalScrollBarEnabled(true); web.setHorizontalScrollBarEnabled(false);
         status.setText("One-tap advanced search: 0/" + total);
         web.loadDataWithBaseURL(null, "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><body style='font:16px Arial;padding:18px;background:#0b1020;color:#eef4ff'><h2>Live advanced investigation</h2><p>Real data pulled live from the public search provider. Only results actually returned are shown; failed queries are recorded, never invented.</p><p>Searching…</p></body>", "text/html", "UTF-8", null);
 
@@ -681,7 +683,7 @@ public class MainActivity extends AppCompatActivity {
         h.append("<div style='margin-top:12px'><h3>Actions</h3>")
          .append("<a class='btn' target='_blank' href='https://www.google.com/searchbyimage'>Google reverse image</a>")
          .append("<a class='btn' target='_blank' href='https://pimeyes.com'>Pimeyes face ID</a>")
-         .append("<button class='btn' onclick='window.location.reload()'>Refresh search</button></div></aside><main><h2>One-tap results</h2>")
+         .append("<a class='btn' href='javascript:void(0)' onclick='history.back()'>Back to search</a><button class='btn' onclick='window.location.reload()'>Refresh search</button></div></aside><main><h2>One-tap results</h2>")
          .append("<p style='font-size:13px;color:#9fb0d6'>Live data fetched from the public provider during this run. Results are leads — open each link and verify against the source. No match is ever invented to fill a gap.</p>");
         if (imgBase64 != null || !imgResults.isEmpty()) {
             h.append("<div class='cat show'><h3>Reverse image / face / body</h3>");
@@ -695,21 +697,11 @@ public class MainActivity extends AppCompatActivity {
             if (imgResults.isEmpty()) h.append("<div class='fail'>No image matches returned for the uploaded photo in this run.</div>");
             h.append("</div>");
         }
-        h.append("<div class='tabs'>");
-        int idx = 0;
+        h.append("<h3>All results (").append(0); int tot=0; for(ArrayList<String[]> v: byCat.values()) tot+=v.size(); h.append(tot).append(")</h3>");
         for (Map.Entry<String, ArrayList<String[]>> e : byCat.entrySet()) {
-            h.append("<span class='tab").append(idx == 0 ? " active" : "").append("' onclick='showCat(this,\"").append(escapeHtml(e.getKey())).append("\")'>").append(escapeHtml(e.getKey())).append(" (").append(e.getValue().size()).append(")</span>");
-            idx++;
-        }
-        h.append("</div>");
-        idx = 0;
-        for (Map.Entry<String, ArrayList<String[]>> e : byCat.entrySet()) {
-            h.append("<div class='cat").append(idx == 0 ? " show" : "").append("' id='cat-").append(escapeHtml(e.getKey())).append("'>");
             for (String[] r : e.getValue()) {
-                h.append("<div class='card'><div class='t'>").append(escapeHtml(r[1])).append("</div><a href='").append(escapeHtml(r[2])).append("' target='_blank'>").append(escapeHtml(r[2])).append("</a><div class='s'>").append(escapeHtml(r[3] == null ? "" : r[3])).append("</div></div>");
+                h.append("<div class='card'><div class='t'><span class='badge' style='background:#2a6cff;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;margin-right:6px'>").append(escapeHtml(e.getKey())).append("</span>").append(escapeHtml(r[1])).append("</div><a href='").append(escapeHtml(r[2])).append("'>").append(escapeHtml(r[2])).append("</a><div class='s'>").append(escapeHtml(r[3] == null ? "" : r[3])).append("</div></div>");
             }
-            h.append("</div>");
-            idx++;
         }
         if (!failures.isEmpty()) {
             h.append("<h3>Failed / empty queries (").append(failures.size()).append(")</h3>");
@@ -721,7 +713,7 @@ public class MainActivity extends AppCompatActivity {
          .append("<div style='margin-top:10px'><b>Video player — paste a video URL:</b><br><input id='vurl' style='width:100%;box-sizing:border-box;padding:8px;margin:6px 0;border-radius:8px;border:1px solid #2a3d78;background:#0b1020;color:#fff' placeholder='https://example.com/video.mp4'><button class='btn' onclick='playV()'>Play</button></div>")
          .append("<video id='vplayer' style='display:none' controls autoplay></video></div>")
          .append("</main></div>")
-         .append("<script>function showCat(el,t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');document.querySelectorAll('.cat').forEach(c=>c.classList.remove('show'));var e=document.getElementById('cat-'+t);if(e)e.classList.add('show');}function playV(){var u=document.getElementById('vurl').value.trim();if(!u)return;var v=document.getElementById('vplayer');v.style.display='block';v.src=u;v.load();v.play();}</script></body></html>");
+         .append("<script>function playV(){var u=document.getElementById('vurl').value.trim();if(!u)return;var v=document.getElementById('vplayer');v.style.display='block';v.src=u;v.load();v.play();}</script></body></html>");
         return h.toString();
     }
 
