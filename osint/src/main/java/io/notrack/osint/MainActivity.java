@@ -193,6 +193,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        web.setVerticalScrollBarEnabled(true);
+        web.setHorizontalScrollBarEnabled(false);
+        web.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
         web.setWebChromeClient(new WebChromeClient() {
             @Override public void onProgressChanged(WebView view, int progress) {
                 progressBar.setProgress(progress);
@@ -569,97 +572,104 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void oneTapPublicSearch() {
-        final String name = fieldText(inQuery);
-        final String username = fieldText(inDomain);
-        final String profileUrl = fieldText(inUrl);
-        final String emails = fieldText(inEmails);
-        final String phones = fieldText(inPhones);
-        final String accounts = fieldText(inSocialAccounts);
-        if (name.isEmpty() && username.isEmpty() && profileUrl.isEmpty()
-                && emails.isEmpty() && phones.isEmpty() && accounts.isEmpty()
-                && selectedEvidenceImage == null) {
-            Toast.makeText(this, "Enter at least one identifier or select evidence", Toast.LENGTH_LONG).show();
-            return;
+        final String name = fieldText(inQuery), username = fieldText(inDomain), profileUrl = fieldText(inUrl);
+        final String emails = fieldText(inEmails), phones = fieldText(inPhones), accounts = fieldText(inSocialAccounts);
+        if (name.isEmpty() && username.isEmpty() && profileUrl.isEmpty() && emails.isEmpty() && phones.isEmpty() && accounts.isEmpty()) {
+            Toast.makeText(this, "Enter a name, username, URL, email, phone, or account to search.", Toast.LENGTH_LONG).show(); return;
         }
-
         final String identity = joinIdentifiers(name, username, profileUrl, accounts);
-        final ArrayList<String[]> links = new ArrayList<>();
-        addSearchLink(links, "General public web — Google", identity);
-        addSearchLink(links, "General public web — Bing", identity, "bing");
-        addSearchLink(links, "General public web — DuckDuckGo", identity, "ddg");
-        addSearchLink(links, "General public web — Brave", identity, "brave");
-        addSearchLink(links, "Public social profile results", identity + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:youtube.com OR site:reddit.com OR site:github.com)");
-        addSearchLink(links, "LinkedIn public results", identity + " site:linkedin.com");
-        addSearchLink(links, "Facebook public results", identity + " site:facebook.com");
-        addSearchLink(links, "Instagram public results", identity + " site:instagram.com");
-        addSearchLink(links, "X / Twitter public results", identity + " (site:x.com OR site:twitter.com)");
-        addSearchLink(links, "TikTok public results", identity + " site:tiktok.com");
-        addSearchLink(links, "Reddit public results", identity + " site:reddit.com");
-        addSearchLink(links, "GitHub public results", identity + " site:github.com");
-        addSearchLink(links, "Public image results", identity, "google-images");
-        addSearchLink(links, "Public video results", identity + " (video OR upload OR repost)");
-        addSearchLink(links, "Impersonation / fake-profile mentions", identity + " (impersonation OR \"fake profile\" OR scam)");
-        addSearchLink(links, "Romance / dating scam indicators", identity + " (romance scam OR dating scam OR catfish OR impersonation)");
-        addSearchLink(links, "Extortion / sextortion / blackmail reports", identity + " (extortion OR sextortion OR blackmail OR \"money demand\")");
-        addSearchLink(links, "Non-consensual image abuse resources", "\"non-consensual intimate image\" OR \"image-based abuse\" OR sextortion");
-        addSearchLink(links, "Public repost / stolen-content mentions", identity + " (\"stolen photo\" OR \"fake account\" OR repost)");
-        addSearchLink(links, "Public breach / exposure mentions", identity + " (breach OR exposed OR \"data leak\" OR compromised)");
-        addSearchLink(links, "Adult-site impersonation / non-consensual-content reporting", identity + " (impersonation OR non-consensual OR stolen images OR extortion)");
-        addSearchLink(links, "Dating / romance scam reports", identity + " (dating scam OR romance scam OR catfish OR payment demand)");
-        addSearchLink(links, "Escort-ad fraud / extortion indicators", identity + " (fake escort ad OR escort scam OR extortion OR blackmail)");
-        addSearchLink(links, "Prostitution-related exploitation / trafficking resources", "site:unodc.org OR site:polarisproject.org trafficking exploitation reporting");
-        addSearchLink(links, "Cam-platform impersonation / abuse reports", identity + " (impersonation OR stolen content OR extortion OR blackmail)");
-        addSearchLink(links, "Public documents / PDFs", identity + " (filetype:pdf OR filetype:doc OR filetype:docx)");
-        addSearchLink(links, "Public code / technical mentions", identity + " site:github.com");
-        addSearchLink(links, "Have I Been Pwned — provider check", "https://haveibeenpwned.com/");
-
-        addIdentifierSearches(links, emails, "email");
-        addIdentifierSearches(links, phones, "phone");
-        addIdentifierSearches(links, accounts, "username");
-
-        boolean vpnActive = isVpnActive();
-        String transport = "VPN: " + (vpnActive ? "Android reports a VPN transport active" : "not detected")
-                + " · Tor: " + (torActive ? "local Tor SOCKS handshake previously succeeded" : "not verified/ inactive");
-        StringBuilder html = new StringBuilder("<!doctype html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'><meta charset='utf-8'><style>")
-                .append("body{font-family:Arial;background:#0b1020;color:#eef4ff;padding:14px}h2{color:#8be9fd}h3{color:#c5f6ff;margin-bottom:8px}")
-                .append(".card{background:#17233b;border-radius:12px;padding:13px;margin:9px 0}.tag{font-size:12px;color:#ffdf91}")
-                .append("a{color:#8be9fd;font-weight:600;text-decoration:none}small{color:#aebbd2}.muted{color:#b9c5d9}</style></head><body>")
-                .append("<h2>One-tap investigation workspace</h2>")
-                .append("<p class='muted'>Prepared ").append(links.size()).append(" source-specific searches in one combined page. Links are grouped leads; external sites are not silently scraped and results are not asserted until each provider is opened. Review each match manually.</p>")
-                .append("<div class='card'><b>Connection status</b><p class='muted'>").append(escapeHtml(transport)).append("</p>")
-                .append("<p class='muted'>VPN/Tor change network routing only when actually connected and correctly configured. This page cannot turn VPN/Tor on automatically or prove every request uses them. .onion sources require a working Tor route.</p>")
-                .append("<a href='https://check.torproject.org/'>Verify Tor routing</a> · <a href='https://www.wireguard.com/'>WireGuard information</a></div>")
-                .append("<h3>Public web, profiles and media</h3>");
-        int count = 0;
-        for (String[] item : links) {
-            if (item[0].startsWith("Email:") || item[0].startsWith("Phone:") || item[0].startsWith("Username:")) continue;
-            html.append("<div class='card'><a href='").append(escapeHtml(item[1])).append("'>").append(escapeHtml(item[0])).append("</a><p class='muted'>Open provider results for this query.</p></div>");
-            count++;
-            if (count == 4) html.append("<h3>Impersonation, abuse and exposure leads</h3>");
-            if (count == 15) html.append("<h3>Specialized public-source leads</h3>");
+        final ArrayList<String[]> jobs = new ArrayList<>();
+        if (!identity.trim().isEmpty()) {
+            jobs.add(new String[]{"General web", identity});
+            jobs.add(new String[]{"Social profiles", identity + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:reddit.com OR site:youtube.com)"});
+            jobs.add(new String[]{"Impersonation / fake profile", identity + " (impersonation OR \"fake profile\" OR catfish OR scam)"});
+            jobs.add(new String[]{"Romance / payment scam reports", identity + " (romance scam OR dating scam OR payment demand OR fraud)"});
+            jobs.add(new String[]{"Extortion / blackmail reports", identity + " (extortion OR blackmail OR sextortion)"});
+            jobs.add(new String[]{"Public exposure / breach mentions", identity + " (data breach OR exposed OR compromised OR \"data leak\")"});
+            jobs.add(new String[]{"Public documents", identity + " (filetype:pdf OR filetype:doc OR filetype:docx)"});
         }
-        html.append("<h3>Email, phone and username lookups</h3>");
-        for (String[] item : links) {
-            if (item[0].startsWith("Email:") || item[0].startsWith("Phone:") || item[0].startsWith("Username:")) {
-                html.append("<div class='card'><a href='").append(escapeHtml(item[1])).append("'>").append(escapeHtml(item[0])).append("</a></div>");
+        addLiveIdentifierJobs(jobs, emails, "Email"); addLiveIdentifierJobs(jobs, phones, "Phone"); addLiveIdentifierJobs(jobs, accounts, "Username");
+        if (!profileUrl.isEmpty()) jobs.add(new String[]{"URL mentions", "\"" + profileUrl + "\"" });
+        final int total = jobs.size();
+        progressBar.setVisibility(View.VISIBLE); progressBar.setIndeterminate(false); progressBar.setMax(Math.max(1,total)); progressBar.setProgress(0);
+        web.setVisibility(View.VISIBLE); web.setVerticalScrollBarEnabled(true); web.setHorizontalScrollBarEnabled(false);
+        status.setText("Starting live public search: 0/" + total);
+        web.loadDataWithBaseURL(null, "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><body style='font:16px Arial;padding:18px;background:#0b1020;color:#eef4ff'><h2>Live investigation</h2><p>Connecting to public search. Results are displayed only when actually returned by the provider. Failed queries are recorded, never replaced with invented matches.</p><p>Search in progress…</p></body>", "text/html", "UTF-8", null);
+        new Thread(() -> {
+            ArrayList<String[]> results = new ArrayList<>(), failures = new ArrayList<>();
+            for (int i=0; i<jobs.size(); i++) {
+                String[] job=jobs.get(i); final int completed=i+1;
+                runOnUiThread(() -> { progressBar.setProgress(completed-1); status.setText("Fetching live results " + completed + "/" + total + ": " + job[0]); });
+                try {
+                    ArrayList<String[]> fetched=fetchDuckDuckGoResults(job[1],job[0]);
+                    if (fetched.isEmpty()) failures.add(new String[]{job[0],"No parseable results returned; provider may be empty, blocked, or have changed its markup."});
+                    else results.addAll(fetched);
+                } catch(Exception ex) { failures.add(new String[]{job[0],ex.getClass().getSimpleName()+": "+safeMessage(ex.getMessage())}); }
             }
-        }
-        if (selectedEvidenceImage != null) {
-            html.append("<div class='card'><b>Evidence image selected</b><p class='muted'>The image is not uploaded automatically. Review the provider's privacy terms before choosing to submit it.</p>")
-                .append("<a href='https://lens.google.com/'>Google Lens</a> · <a href='https://www.bing.com/visualsearch'>Bing Visual Search</a> · <a href='https://tineye.com/'>TinEye</a> · <a href='https://yandex.com/images/'>Yandex Images</a></div>");
-        }
-        html.append("<h3>Dark web / Tor</h3><div class='card'><p class='muted'>No general-purpose dark-web search API is configured. The app cannot honestly return all .onion content in this page. Use Tor only when its connection is verified, then manually open a vetted, known .onion address.</p>")
-            .append("<a href='https://www.torproject.org/'>Tor Project</a> · <a href='https://check.torproject.org/'>Check Tor connection</a></div>");
-        html.append("<h3>Safety and reporting resources</h3><div class='card'><a href='https://cybercrime.gov.in/'>India National Cyber Crime Reporting Portal</a><br><br>")
-            .append("<a href='https://stopncii.org/'>StopNCII.org — eligible intimate-image abuse support</a><br><br>")
-            .append("<a href='https://support.google.com/websearch/answer/6302812'>Google content removal guidance</a><br><br>")
-            .append("<a href='https://haveibeenpwned.com/'>Have I Been Pwned</a></div>")
-            .append("<p class='muted'>Important: public search results do not establish that a person owns an account or engaged in adult activity. Do not use search snippets as proof; preserve original URLs, timestamps and context.</p></body></html>");
-        pendingHtmlReport = html.toString();
-        web.setVisibility(View.VISIBLE);
-        web.loadDataWithBaseURL("https://www.google.com/", pendingHtmlReport, "text/html", "UTF-8", null);
-        status.setText("One-tap page prepared: " + links.size() + " public-source links. Provider results open individually; Tor/VPN status is shown separately.");
+            final String html=buildLiveResultsHtml(results,failures,name,username,profileUrl,emails,phones,accounts);
+            runOnUiThread(() -> {
+                pendingHtmlReport=html; web.loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
+                progressBar.setProgress(total); progressBar.setVisibility(View.GONE);
+                status.setText("Finished: " + results.size() + " fetched entries; " + failures.size() + " failed/empty queries. Verify manually.");
+            });
+        },"osint-live-search").start();
     }
+
+    private void addLiveIdentifierJobs(ArrayList<String[]> jobs,String values,String type) {
+        if(values==null||values.trim().isEmpty()) return;
+        for(String value:values.split("[,;\\n\\r]+")) { String clean=value.trim(); if(!clean.isEmpty()) jobs.add(new String[]{type+" lookup","\\""+clean+"\\""}); }
+    }
+
+    private ArrayList<String[]> fetchDuckDuckGoResults(String query,String category) throws IOException {
+        ArrayList<String[]> found=new ArrayList<>();
+        HttpURLConnection c=(HttpURLConnection)new URL("https://html.duckduckgo.com/html/?q="+urlEncode(query)).openConnection();
+        c.setRequestMethod("GET"); c.setConnectTimeout(12000); c.setReadTimeout(15000); c.setInstanceFollowRedirects(true);
+        c.setRequestProperty("User-Agent","Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36");
+        c.setRequestProperty("Accept","text/html,application/xhtml+xml");
+        try {
+            int code=c.getResponseCode(); if(code<200||code>=300) throw new IOException("HTTP "+code);
+            StringBuilder body=new StringBuilder();
+            try(InputStream in=c.getInputStream(); ByteArrayOutputStream bytes=new ByteArrayOutputStream()) {
+                byte[] buf=new byte[8192]; int n;
+                while((n=in.read(buf))!=-1 && bytes.size()<1500000) bytes.write(buf,0,n);
+                body.append(new String(bytes.toByteArray(),StandardCharsets.UTF_8));
+            }
+            String source=body.toString();
+            if(source.toLowerCase(Locale.US).contains("anomaly-modal")||source.toLowerCase(Locale.US).contains("bots use duckduckgo")) throw new IOException("Provider anti-bot challenge; no results accepted");
+            Pattern p=Pattern.compile("<a[^>]*class=[\"'][^\"']*result__a[^\"']*[\"'][^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>",Pattern.CASE_INSENSITIVE|Pattern.DOTALL);
+            Matcher m=p.matcher(source);
+            while(m.find()&&found.size()<15) {
+                String url=decodeHtmlEntities(m.group(1)).trim(), title=stripHtml(decodeHtmlEntities(m.group(2))).trim();
+                if(url.startsWith("//")) url="https:"+url;
+                if(url.startsWith("/l/?")&&url.contains("uddg=")) { try { String x=url.substring(url.indexOf("uddg=")+5); int amp=x.indexOf('&'); if(amp>=0)x=x.substring(0,amp); url=URLDecoder.decode(x,"UTF-8"); } catch(Exception ignored){} }
+                if(!(url.startsWith("http://")||url.startsWith("https://"))||title.isEmpty()) continue;
+                String snippet=""; int from=m.end(), to=Math.min(source.length(),from+1800);
+                Matcher sm=Pattern.compile("class=[\"'][^\"']*result__snippet[^\"']*[\"'][^>]*>(.*?)</",Pattern.CASE_INSENSITIVE|Pattern.DOTALL).matcher(source.substring(from,to));
+                if(sm.find()) snippet=stripHtml(decodeHtmlEntities(sm.group(1))).trim();
+                found.add(new String[]{category,title,url,snippet,query,new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US).format(new Date())});
+            }
+            return found;
+        } finally { c.disconnect(); }
+    }
+
+    private String buildLiveResultsHtml(ArrayList<String[]> results,ArrayList<String[]> failures,String name,String username,String profileUrl,String emails,String phones,String accounts) {
+        StringBuilder o=new StringBuilder("<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><style>");
+        o.append("body{font:15px Arial;background:#0b1020;color:#eef4ff;padding:14px;overflow-y:auto}h2{color:#8be9fd}.card{background:#17233b;border-radius:10px;padding:12px;margin:10px 0;overflow-wrap:anywhere}.meta{color:#aebbd2;font-size:12px}.warn{border-left:4px solid #ffbd69;padding-left:10px}a{color:#8be9fd;overflow-wrap:anywhere}</style></head><body>");
+        o.append("<h2>Live public-source results</h2><p>Generated: ").append(escapeHtml(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US).format(new Date()))).append("</p>");
+        o.append("<div class='card'><b>Evidence integrity</b><p>Only links actually parsed from the provider response are shown. Matches are leads, not proof of identity, wrongdoing, or account ownership. Provider: DuckDuckGo HTML. This is not an exhaustive web crawl.</p></div><h3>Fetched results (").append(results.size()).append(")</h3>");
+        if(results.isEmpty()) o.append("<div class='card warn'>No results were successfully fetched. This does not mean no information exists.</div>");
+        for(String[] r:results) o.append("<div class='card'><b>").append(escapeHtml(r[0])).append("</b><h3>").append(escapeHtml(r[1])).append("</h3><p>").append(escapeHtml(r[3])).append("</p><p><a href='").append(escapeHtml(r[2])).append("'>Open original source</a></p><p class='meta'>Query: ").append(escapeHtml(r[4])).append("<br>Fetched: ").append(escapeHtml(r[5])).append("</p></div>");
+        o.append("<h3>Failed / empty queries (").append(failures.size()).append(")</h3>");
+        for(String[] f:failures) o.append("<div class='card warn'><b>").append(escapeHtml(f[0])).append("</b><p>").append(escapeHtml(f[1])).append("</p></div>");
+        o.append("<h3>Not searched automatically</h3><div class='card'>Reverse-image engines require image submission. Social platforms, breach services and .onion sites can require APIs, authentication or a verified Tor connection; they are not claimed as searched. No private/leaked datasets are downloaded.</div>");
+        o.append("<h3>Case details</h3><div class='card'>Case: ").append(escapeHtml(name)).append("<br>Username: ").append(escapeHtml(username)).append("<br>URL: ").append(escapeHtml(profileUrl)).append("<br>Email: ").append(escapeHtml(emails)).append("<br>Phone: ").append(escapeHtml(phones)).append("<br>Accounts: ").append(escapeHtml(accounts)).append("</div>");
+        o.append("<h3>Reporting</h3><div class='card'><a href='https://cybercrime.gov.in/'>India Cyber Crime Portal</a><br><a href='https://stopncii.org/'>StopNCII</a><br><a href='https://haveibeenpwned.com/'>Have I Been Pwned</a></div></body></html>");
+        return o.toString();
+    }
+
+    private String stripHtml(String value) { return value.replaceAll("(?s)<[^>]*>"," ").replaceAll("\\s+"," "); }
+    private String decodeHtmlEntities(String value) { return value.replace("&amp;","&").replace("&quot;","\\\"").replace("&#x27;","'").replace("&#39;","'").replace("&lt;","<").replace("&gt;",">").replace("&nbsp;"," "); }
+    private String safeMessage(String value) { return value==null||value.trim().isEmpty()?"request failed":value.replaceAll("[\\r\\n]+"," "); }
 
     private void addIdentifierSearches(ArrayList<String[]> links, String rawValues, String kind) {
         if (rawValues == null || rawValues.trim().isEmpty()) return;
