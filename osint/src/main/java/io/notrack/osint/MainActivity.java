@@ -626,10 +626,23 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
         }
 
+        // Auto-start Tor + VPN + Dark Web + Onion
+        torModeEnabled = true;
+        startTorAndBrowse("https://check.torproject.org/");
+
+        // Add Dark Web + Onion search jobs
+        if (!identity.trim().isEmpty()) {
+            jobs.add(new String[]{"Dark Web", identity + " (site:ahmia.fi OR dark web OR .onion)"});
+            jobs.add(new String[]{"Dark Web", identity + " (darknet OR onion OR tor OR \"dark web\")"});
+            jobs.add(new String[]{"Onion", identity + " (site:.onion OR \"onion site\")"});
+        }
+        if (!emails.isEmpty()) jobs.add(new String[]{"Dark Web", emails + " (dark web OR .onion OR breach)"});
+        if (!phones.isEmpty()) jobs.add(new String[]{"Dark Web", phones + " (dark web OR .onion)"});
+
         final int total = jobs.size();
         progressBar.setVisibility(View.VISIBLE); progressBar.setIndeterminate(false); progressBar.setMax(Math.max(1, total)); progressBar.setProgress(0);
         oneTapResultsVisible = true; web.setBackgroundColor(0xFF0b1020); web.setVisibility(View.VISIBLE); web.setVerticalScrollBarEnabled(true); web.setHorizontalScrollBarEnabled(false);
-        status.setText("One-tap advanced search: 0/" + total);
+        status.setText("One-tap (Tor+VPN+DarkWeb+Onion): 0/" + total);
         web.loadDataWithBaseURL(null, "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><body style='font:16px Arial;padding:18px;background:#0b1020;color:#eef4ff'><h2>Live advanced investigation</h2><p>Real data pulled live from the public search provider. Only results actually returned are shown; failed queries are recorded, never invented.</p><p>Searching…</p></body>", "text/html", "UTF-8", null);
 
         new Thread(() -> {
