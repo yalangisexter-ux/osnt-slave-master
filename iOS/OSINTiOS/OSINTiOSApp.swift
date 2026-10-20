@@ -25,6 +25,7 @@ struct ContentView: View {
     @AppStorage("osint_leaksio_api_key") private var leaksIoApiKey = ""
     @State private var reportText = ""
     @State private var showShare = false
+    @State private var isCheckingBreach = false
 
     private let engines = ["Google", "Bing", "DuckDuckGo", "Brave"]
     private let tools = [
@@ -200,8 +201,14 @@ struct ContentView: View {
         case "Face Search": direct = "https://images.google.com/"
         case "Image Search": direct = "https://images.google.com/search?q=\(encoded(q.isEmpty ? n : q))"
         case "Breach Check (HIBP)":
-            direct = "https://haveibeenpwned.com/"
-            status = "Open Have I Been Pwned and check only an account you own or are authorized to investigate."
+            let account = e.isEmpty ? q : e
+            guard account.contains("@"), !hibpApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                status = "Enter an email address and add your Have I Been Pwned API key in Settings."
+                showSettings = hibpApiKey.isEmpty
+                return
+            }
+            Task { await checkHIBP(account: account) }
+            return
         case "Leaks.io Search":
             direct = "https://leaks.io/"
             status = "Opened Leaks.io. API-backed checks require a valid API key and supported endpoint."
@@ -250,6 +257,47 @@ struct ContentView: View {
         }
         status = "Searching for: \(term)"
         open(target)
+    }
+
+    @MainActor
+    private func checkHIBP(account: String) async {
+        guard let encodedAccount = account.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "https://haveibeenpwned.com/api/v3/breachedaccount/\(encodedAccount)?truncateResponse=true") else {
+            status = "Could not prepare the breach-check request."
+            return
+        }
+        isCheckingBreach = true
+        status = "Checking Have I Been Pwned for the supplied account…"
+        defer { isCheckingBreach = false }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(hibpApiKey, forHTTPHeaderField: "hibp-api-key")
+        request.setValue("OSINT-Workspace-iOS", forHTTPHeaderField: "user-agent")
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                status = "HIBP returned an invalid response."
+                return
+            }
+            switch http.statusCode {
+            case 200:
+                let decoded = try JSONSerialization.jsonObject(with: data)
+                let count = (decoded as? [[String: Any]])?.count ?? 0
+                status = "HIBP returned \(count) breach record(s) for the supplied account."
+                reportText = "OSINT Workspace — HIBP Check\nDate: \(ISO8601DateFormatter().string(from: Date()))\nAccount: \(account)\nResult: \(count) breach record(s) returned.\nUse only for accounts you own or are authorized to check."
+            case 404:
+                status = "HIBP reports no known breach records for the supplied account."
+                reportText = "OSINT Workspace — HIBP Check\nDate: \(ISO8601DateFormatter().string(from: Date()))\nAccount: \(account)\nResult: No known breach records returned. This does not guarantee the account has never been exposed."
+            case 401, 403:
+                status = "HIBP rejected the API key or access. Verify your key/subscription in Settings."
+            case 429:
+                status = "HIBP rate limit reached. Wait before trying again."
+            default:
+                status = "HIBP request failed with HTTP \(http.statusCode)."
+            }
+        } catch {
+            status = "HIBP request failed: \(error.localizedDescription)"
+        }
     }
 
     private func open(_ target: URL) {
