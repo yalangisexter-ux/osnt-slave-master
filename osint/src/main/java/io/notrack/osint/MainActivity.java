@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     // ==================== UI COMPONENTS ====================
     private DrawerLayout drawer;
     private WebView web;
-    private EditText inQuery, inDomain, inUrl, inFilePath;
+    private EditText inQuery, inDomain, inUrl, inFilePath, inEmails, inPhones, inSocialAccounts;\n    private Uri selectedEvidenceImage;
     private TextView status;
     private Spinner engine, mode;
     private ProgressBar progressBar;
@@ -123,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         inQuery = findViewById(R.id.in_query);
         inDomain = findViewById(R.id.in_domain);
         inUrl = findViewById(R.id.in_url);
-        inFilePath = findViewById(R.id.in_file_path);
+        inFilePath = findViewById(R.id.in_file_path);\n        inEmails = findViewById(R.id.in_emails);\n        inPhones = findViewById(R.id.in_phones);\n        inSocialAccounts = findViewById(R.id.in_social_accounts);
         status = findViewById(R.id.txt_status);
         engine = findViewById(R.id.spin_engine);
         mode = findViewById(R.id.spin_mode);
@@ -194,13 +194,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDrawer() {
-        findViewById(R.id.btn_search).setOnClickListener(v -> { doSearch(); closeDrawer(); });
+        findViewById(R.id.btn_search).setOnClickListener(v -> { oneTapPublicSearch(); closeDrawer(); });
         findViewById(R.id.btn_dork).setOnClickListener(v -> { showDorkSelector(); closeDrawer(); });
         findViewById(R.id.btn_web).setOnClickListener(v -> { browse("https://www.google.com"); closeDrawer(); });
         findViewById(R.id.btn_dark).setOnClickListener(v -> { openDarkWeb(); closeDrawer(); });
         findViewById(R.id.btn_tor).setOnClickListener(v -> { startTorAndBrowse("https://check.torproject.org/"); closeDrawer(); });
         findViewById(R.id.btn_vpn).setOnClickListener(v -> { showVpnMenu(); closeDrawer(); });
-        findViewById(R.id.btn_images).setOnClickListener(v -> { reverseImageSearch(); closeDrawer(); });
+        findViewById(R.id.btn_images).setOnClickListener(v -> { pickEvidenceImage(); closeDrawer(); });
         findViewById(R.id.btn_face).setOnClickListener(v -> { faceSearch(); closeDrawer(); });
         findViewById(R.id.btn_leaks).setOnClickListener(v -> { showLeaksSearch(); closeDrawer(); });
         findViewById(R.id.btn_porn).setOnClickListener(v -> { showPornSearch(); closeDrawer(); });
@@ -225,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_update).setOnClickListener(v -> { checkForUpdates(); closeDrawer(); });
         findViewById(R.id.btn_playprotect).setOnClickListener(v -> { bypassPlayProtect(); closeDrawer(); });
         // One-tap connect row (main screen)
-        findViewById(R.id.btn_search2).setOnClickListener(v -> { doSearch(); closeDrawer(); });
+        findViewById(R.id.btn_search2).setOnClickListener(v -> { oneTapPublicSearch(); closeDrawer(); });
         findViewById(R.id.btn_password).setOnClickListener(v -> { showPasswordCracker(); closeDrawer(); });
         findViewById(R.id.btn_hpb).setOnClickListener(v -> { showHpbPanel(); closeDrawer(); });
         findViewById(R.id.btn_leaksio).setOnClickListener(v -> { leaksIoCheck(); closeDrawer(); });
@@ -509,6 +509,78 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // ==================== SEARCH ====================
+
+    // ==================== ONE-TAP AUTHORIZED PUBLIC-FOOTPRINT SEARCH ====================
+    private void pickEvidenceImage() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("image/*");
+        startActivityForResult(pick, IMAGE_PICK_REQUEST);
+    }
+
+    private String fieldText(EditText field) {
+        return field == null || field.getText() == null ? "" : field.getText().toString().trim();
+    }
+
+    private void oneTapPublicSearch() {
+        String name = fieldText(inQuery), username = fieldText(inDomain), profileUrl = fieldText(inUrl);
+        String emails = fieldText(inEmails), phones = fieldText(inPhones), accounts = fieldText(inSocialAccounts);
+        if (name.isEmpty() && username.isEmpty() && profileUrl.isEmpty() && emails.isEmpty() && phones.isEmpty() && accounts.isEmpty() && selectedEvidenceImage == null) {
+            Toast.makeText(this, "Enter at least one identifier or select an image", Toast.LENGTH_LONG).show();
+            return;
+        }
+        ArrayList<String[]> links = new ArrayList<>();
+        addSearchLink(links, "Google — general public web", joinIdentifiers(name, username, profileUrl, accounts));
+        addSearchLink(links, "Bing — general public web", joinIdentifiers(name, username, profileUrl, accounts));
+        addSearchLink(links, "DuckDuckGo — general public web", joinIdentifiers(name, username, profileUrl, accounts));
+        addSearchLink(links, "Public social profiles", joinIdentifiers(name, username, accounts) + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:youtube.com OR site:reddit.com)");
+        addSearchLink(links, "LinkedIn public results", joinIdentifiers(name, username, accounts) + " site:linkedin.com");
+        addSearchLink(links, "GitHub public results", joinIdentifiers(name, username, accounts) + " site:github.com");
+        addSearchLink(links, "Public pages mentioning supplied email", emails);
+        addSearchLink(links, "Public pages mentioning supplied phone", phones);
+        addSearchLink(links, "Google Images", joinIdentifiers(name, username, accounts));
+        addSearchLink(links, "Bing Images", joinIdentifiers(name, username, accounts));
+        addSearchLink(links, "Google dorks — public indexed pages", joinIdentifiers(name, username, accounts) + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:github.com)");
+        StringBuilder html = new StringBuilder("<!doctype html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'><meta charset='utf-8'><style>body{font-family:Arial;background:#0b1020;color:#eef4ff;padding:16px}h2{color:#8be9fd}.card{background:#17233b;border-radius:12px;padding:14px;margin:10px 0}a{color:#8be9fd;font-weight:600;text-decoration:none}small{color:#aebbd2}</style></head><body><h2>Public-footprint investigation</h2><p><small>Search links open public search providers. Results are leads, not proof of identity. Verify independently and follow agency authorization and evidence-handling rules.</small></p>");
+        for (String[] item : links) html.append("<div class='card'><a href='").append(escapeHtml(item[1])).append("'>").append(escapeHtml(item[0])).append("</a></div>");
+        if (selectedEvidenceImage != null) html.append("<div class='card'><b>Image selected</b><p><small>The app does not upload images to third-party face-identification services. Upload only through a provider when authorized.</small></p><a href='https://lens.google.com/'>Open Google Lens</a><br><br><a href='https://www.bing.com/visualsearch'>Open Bing Visual Search</a></div>");
+        html.append("<div class='card'><a href='https://haveibeenpwned.com/'>Have I Been Pwned — check only an email you own or are authorized to investigate</a></div></body></html>");
+        web.setVisibility(View.VISIBLE);
+        web.loadDataWithBaseURL("https://www.google.com/", html.toString(), "text/html", "UTF-8", null);
+        status.setText("Prepared " + links.size() + " public-source searches. Tap a source to open its results.");
+    }
+
+    private String joinIdentifiers(String... values) {
+        StringBuilder result = new StringBuilder();
+        for (String value : values) if (value != null && !value.trim().isEmpty()) {
+            if (result.length() > 0) result.append(' ');
+            result.append('"').append(value.trim()).append('"');
+        }
+        return result.toString().trim();
+    }
+
+    private void addSearchLink(ArrayList<String[]> links, String label, String query) {
+        if (query == null || query.trim().isEmpty()) return;
+        String q = query.trim(), url;
+        if (label.startsWith("Bing —")) url = "https://www.bing.com/search?q=" + urlEncode(q);
+        else if (label.startsWith("DuckDuckGo")) url = "https://duckduckgo.com/?q=" + urlEncode(q);
+        else if (label.equals("Google Images")) url = "https://www.google.com/search?tbm=isch&q=" + urlEncode(q);
+        else if (label.equals("Bing Images")) url = "https://www.bing.com/images/search?q=" + urlEncode(q);
+        else url = "https://www.google.com/search?q=" + urlEncode(q);
+        links.add(new String[]{label, url});
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK && data != null && data.getData() != null && requestCode == IMAGE_PICK_REQUEST) {
+            selectedEvidenceImage = data.getData();
+            try { getContentResolver().takePersistableUriPermission(selectedEvidenceImage, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
+            catch (Exception ignored) {}
+            status.setText("Image selected. Tap Search All to prepare public-source searches.");
+        }
+    }
+
     private void doSearch() {
         String q = buildQuery();
         if (q.isEmpty()) { Toast.makeText(this, "Enter search terms", Toast.LENGTH_SHORT).show(); return; }
