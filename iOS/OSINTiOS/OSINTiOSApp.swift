@@ -213,8 +213,16 @@ struct ContentView: View {
         var direct: String?
 
         switch selectedTool {
-        case "Domain Search": term = "site:\(d.isEmpty ? q : d) \(q)"
-        case "URL Investigation": term = "\"\(u.isEmpty ? q : u)\""
+        case "Domain Search":
+            let host = d.isEmpty ? q : d
+            guard !host.isEmpty else { status = "Enter a domain."; return }
+            Task { await inspectDomain(host) }
+            return
+        case "URL Investigation":
+            let raw = u.isEmpty ? q : u
+            guard !raw.isEmpty else { status = "Enter a URL."; return }
+            Task { await inspectURL(raw) }
+            return
         case "Email Search": term = "\"\(e.isEmpty ? q : e)\""
         case "Phone Search": term = "\"\(p.isEmpty ? q : p)\""
         case "Username Search": term = "\"\(handle.isEmpty ? q : handle)\" (profile OR username)"
@@ -282,6 +290,59 @@ struct ContentView: View {
         open(target)
     }
 
+    @MainActor
+    private func inspectDomain(_ rawDomain: String) async {
+        let host = rawDomain.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "https://", with: "")
+            .replacingOccurrences(of: "http://", with: "")
+            .split(separator: "/").first.map(String.init) ?? ""
+        guard !host.isEmpty, !host.contains(" ") else { status = "Enter a valid domain."; return }
+        status = "Looking up public DNS records for " + host + "…"
+        var records: [String] = []
+        for type in ["A", "AAAA", "MX", "NS", "TXT"] {
+            guard var parts = URLComponents(string: "https://cloudflare-dns.com/dns-query") else { continue }
+            parts.queryItems = [URLQueryItem(name: "name", value: host), URLQueryItem(name: "type", value: type)]
+            guard let url = parts.url else { continue }
+            var request = URLRequest(url: url)
+            request.setValue("application/dns-json", forHTTPHeaderField: "accept")
+            do {
+                let (data, _) = try await URLSession.shared.data(for: request)
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let answers = json["Answer"] as? [[String: Any]] {
+                    let values = answers.compactMap { $0["data"] as? String }
+                    if !values.isEmpty { records.append(type + ": " + values.joined(separator: ", ")) }
+                }
+            } catch { records.append(type + ": lookup failed") }
+        }
+        let result = records.isEmpty ? "No DNS answers returned or DNS service unavailable." : records.joined(separator: "\n")
+        status = "Domain: " + host + "\n" + result
+        reportText = "OSINT Workspace — Domain/DNS Lookup\nDate: " + ISO8601DateFormatter().string(from: Date()) + "\nDomain: " + host + "\n" + result
+    }
+
+    @MainActor
+    private func inspectURL(_ rawURL: String) async {
+        let normalized = rawURL.contains("://") ? rawURL : "https://" + rawURL
+        guard let target = URL(string: normalized), let scheme = target.scheme?.lowercased(),
+              ["https", "http"].contains(scheme), let host = target.host else { status = "Enter a valid HTTP or HTTPS URL."; return }
+        status = "Checking URL response and security headers…"
+        var request = URLRequest(url: target, timeoutInterval: 15)
+        request.httpMethod = "HEAD"
+        do {
+            var (_, response) = try await URLSession.shared.data(for: request)
+            var http = response as? HTTPURLResponse
+            if http?.statusCode == 405 {
+                request.httpMethod = "GET"
+                (_, response) = try await URLSession.shared.data(for: request)
+                http = response as? HTTPURLResponse
+            }
+            guard let http else { status = "The server returned a non-HTTP response."; return }
+            let names = ["Strict-Transport-Security", "Content-Security-Policy", "X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy"]
+            let headers = names.map { $0 + ": " + (http.value(forHTTPHeaderField: $0) ?? "Not present") }.joined(separator: "\n")
+            let result = "URL: " + (http.url?.absoluteString ?? target.absoluteString) + "\nHost: " + host + "\nScheme: " + scheme + "\nHTTP status: " + String(http.statusCode) + "\n\nSecurity headers:\n" + headers
+            status = result
+            reportText = "OSINT Workspace — URL Inspection\nDate: " + ISO8601DateFormatter().string(from: Date()) + "\n" + result
+        } catch { status = "URL request failed: " + error.localizedDescription }
+    }
     @MainActor
     private func checkHIBP(account: String) async {
         guard let encodedAccount = account.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
