@@ -519,7 +519,9 @@ public class MainActivity extends AppCompatActivity {
     private void pickEvidenceImage() {
         Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         pick.addCategory(Intent.CATEGORY_OPENABLE);
-        pick.setType("image/*");
+        pick.setType("*/*");
+        pick.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*", "application/pdf", "text/plain", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+        pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         startActivityForResult(pick, IMAGE_PICK_REQUEST);
     }
 
@@ -562,6 +564,15 @@ public class MainActivity extends AppCompatActivity {
         addIdentifierSearches(links, emails, "email");
         addIdentifierSearches(links, phones, "phone");
         addIdentifierSearches(links, accounts, "username");
+
+        // Public-source leads for suspected impersonation, extortion and content reposting.
+        if (!identity.isEmpty()) {
+            addSearchLink(links, "Impersonation / fake-profile mentions", identity + " impersonation OR \"fake profile\" OR scam");
+            addSearchLink(links, "Extortion / sextortion mentions", identity + " extortion OR sextortion OR blackmail");
+            addSearchLink(links, "Possible stolen photo/video reposts", identity + " \"stolen photos\" OR \"fake account\" OR \"reposted video\"");
+            addSearchLink(links, "Dating / escort-ad scam indicators", identity + " \"dating scam\" OR \"escort scam\" OR blackmail");
+            addSearchLink(links, "Public exposure / breach mentions", identity + " exposed OR breach OR \"data leak\"");
+        }
 
         StringBuilder html = new StringBuilder("<!doctype html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'><meta charset='utf-8'><style>")
                 .append("body{font-family:Arial;background:#0b1020;color:#eef4ff;padding:16px}h2{color:#8be9fd}")
