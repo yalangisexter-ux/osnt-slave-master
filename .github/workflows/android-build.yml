@@ -33,6 +33,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Reuse the release APK signing identity
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: osnt-debug-signing-identity-v1
+
       - name: Build all modules
         run: ./gradlew assembleDebug --no-daemon
 
