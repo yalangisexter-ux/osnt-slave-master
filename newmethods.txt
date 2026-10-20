@@ -1,0 +1,55 @@
+    private ArrayList<String[]> fetchBingResults(String query,String category) throws IOException {
+        ArrayList<String[]> found=new ArrayList<>();
+        HttpURLConnection c=(HttpURLConnection)new URL("https://www.bing.com/search?q="+urlEncode(query)+"&count=10").openConnection();
+        c.setRequestMethod("GET"); c.setConnectTimeout(12000); c.setReadTimeout(15000); c.setInstanceFollowRedirects(true);
+        c.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36");
+        c.setRequestProperty("Accept-Language","en-US,en;q=0.9");
+        c.setRequestProperty("Accept","text/html,application/xhtml+xml");
+        try {
+            int code=c.getResponseCode(); if(code<200||code>=300) throw new IOException("HTTP "+code);
+            StringBuilder body=new StringBuilder();
+            try(InputStream in=c.getInputStream(); ByteArrayOutputStream bytes=new ByteArrayOutputStream()) {
+                byte[] buf=new byte[8192]; int n;
+                while((n=in.read(buf))!=-1 && bytes.size()<1500000) bytes.write(buf,0,n);
+                body.append(new String(bytes.toByteArray(),StandardCharsets.UTF_8));
+            }
+            String source=body.toString();
+            Matcher m=Pattern.compile("<li class=\"b_algo\".*?</li>",Pattern.DOTALL).matcher(source);
+            while(m.find()&&found.size()<10){
+                String block=m.group();
+                Matcher tm=Pattern.compile("<h2><a[^>]*href=\"[^\"]*\"[^>]*>(.*?)</a>",Pattern.DOTALL).matcher(block);
+                Matcher um=Pattern.compile("<cite>(.*?)</cite>",Pattern.DOTALL).matcher(block);
+                Matcher sm=Pattern.compile("<p[^>]*>(.*?)</p>",Pattern.DOTALL).matcher(block);
+                if(!tm.find()) continue;
+                String title=stripHtml(decodeHtmlEntities(tm.group(1))).trim();
+                String rurl="";
+                if(um.find()) rurl=um.group(1).trim();
+                if(!rurl.startsWith("http://")&&!rurl.startsWith("https://")) rurl="https://"+rurl.replaceFirst("^/","");
+                String snippet=sm.find()?stripHtml(decodeHtmlEntities(sm.group(1))).trim():"";
+                if(title.isEmpty()||!(rurl.startsWith("http://")||rurl.startsWith("https://"))) continue;
+                found.add(new String[]{category,title,rurl,snippet,query,new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US).format(new Date())});
+            }
+            return found;
+        } finally { c.disconnect(); }
+    }
+
+    private ArrayList<String> fetchBingImages(String query) {
+        ArrayList<String> imgs=new ArrayList<>();
+        HttpURLConnection c=(HttpURLConnection)new URL("https://www.bing.com/images/search?q="+urlEncode(query)).openConnection();
+        c.setRequestMethod("GET"); c.setConnectTimeout(12000); c.setReadTimeout(15000); c.setInstanceFollowRedirects(true);
+        c.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36");
+        c.setRequestProperty("Accept-Language","en-US,en;q=0.9");
+        try {
+            if(c.getResponseCode()==200){
+                StringBuilder body=new StringBuilder();
+                try(InputStream in=c.getInputStream(); ByteArrayOutputStream bytes=new ByteArrayOutputStream()) {
+                    byte[] buf=new byte[8192]; int n;
+                    while((n=in.read(buf))!=-1 && bytes.size()<1500000) bytes.write(buf,0,n);
+                    body.append(new String(bytes.toByteArray(),StandardCharsets.UTF_8));
+                }
+                Matcher m=Pattern.compile("murl&quot;:&quot;(https?://[^&]+?)&quot;",Pattern.CASE_INSENSITIVE).matcher(body.toString());
+                while(m.find()&&imgs.size()<15){ String u=m.group(1).trim(); if(!u.isEmpty()&&!imgs.contains(u)) imgs.add(u); }
+            }
+        } catch(Exception ignored){ } finally { c.disconnect(); }
+        return imgs;
+    }

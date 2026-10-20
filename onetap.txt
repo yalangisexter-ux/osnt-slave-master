@@ -1,0 +1,168 @@
+    private void oneTapPublicSearch() {
+        String query = inQuery.getText().toString().trim();
+        String email = inEmails.getText().toString().trim();
+        String phone = inPhones.getText().toString().trim();
+        String domain = inDomain.getText().toString().trim();
+        String social = inSocialAccounts.getText().toString().trim();
+        if (query.isEmpty() && email.isEmpty() && phone.isEmpty() && domain.isEmpty()) {
+            Toast.makeText(this, "Enter name, email, phone, or domain first", Toast.LENGTH_LONG).show();
+            return;
+        }
+        String q = query.isEmpty() ? (email.isEmpty() ? phone : email) : query;
+
+        // Build comprehensive job list: {category, bingQuery, type}
+        ArrayList<String[]> jobs = new ArrayList<>();
+        jobs.add(new String[]{"Web Profile", q + " person profile contact details", "web"});
+        jobs.add(new String[]{"Web Contact", q + " " + (phone.isEmpty()?"":"+"+phone) + " address location city", "web"});
+        jobs.add(new String[]{"Photos & Images", q, "images"});
+        if (selectedEvidenceImage != null) {
+            jobs.add(new String[]{"Reverse Image Search", q, "reverse"});
+            jobs.add(new String[]{"Face & Body ID", q + " face recognition body identification", "face"});
+        }
+        // Social media
+        jobs.add(new String[]{"Instagram", q + " site:instagram.com leak photo exposed", "web"});
+        jobs.add(new String[]{"Facebook", q + " site:facebook.com leak photo data", "web"});
+        jobs.add(new String[]{"Snapchat", q + " site:snapchat.com leak exposed snap", "web"});
+        jobs.add(new String[]{"Twitter/X", q + " site:twitter.com OR site:x.com leak exposed", "web"});
+        jobs.add(new String[]{"LinkedIn", q + " site:linkedin.com profile data leak", "web"});
+        jobs.add(new String[]{"TikTok", q + " site:tiktok.com leak video exposed", "web"});
+        jobs.add(new String[]{"Telegram", q + " site:t.me leak channel group", "web"});
+        jobs.add(new String[]{"WhatsApp", q + " site:whatsapp.com leak group status", "web"});
+        // Porn sites
+        jobs.add(new String[]{"Pornhub", q + " site:pornhub.com video", "web"});
+        jobs.add(new String[]{"XVideos", q + " site:xvideos.com video", "web"});
+        jobs.add(new String[]{"XNXX", q + " site:xnxx.com video", "web"});
+        jobs.add(new String[]{"RedTube", q + " site:redtube.com video", "web"});
+        jobs.add(new String[]{"YouPorn", q + " site:youporn.com video", "web"});
+        // Live cams
+        jobs.add(new String[]{"Chaturbate", q + " site:chaturbate.com cam live", "web"});
+        jobs.add(new String[]{"Stripchat", q + " site:stripchat.com cam live", "web"});
+        jobs.add(new String[]{"CamSoda", q + " site:camsoda.com cam live", "web"});
+        jobs.add(new String[]{"BongaCams", q + " site:bongacams.com cam", "web"});
+        // Escorts
+        jobs.add(new String[]{"SkipTheGames", q + " site:skipthegames.com escort", "web"});
+        jobs.add(new String[]{"EroticMonkey", q + " site:eroticmonkey.com escort", "web"});
+        jobs.add(new String[]{"EuroGirlsEscort", q + " site:eurogirlsescort.com escort", "web"});
+        jobs.add(new String[]{"CityXGuide", q + " site:cityxguide.com escort", "web"});
+        // Hotel leaks
+        jobs.add(new String[]{"OYO Hotels", q + " OYO hotel leak guest data", "web"});
+        jobs.add(new String[]{"Booking.com", q + " booking.com hotel leak guest list", "web"});
+        jobs.add(new String[]{"Hotel Guest List", q + " hotel guest list leak filetype:xls OR filetype:csv", "web"});
+        // iCloud leaks (Indian, local, international)
+        jobs.add(new String[]{"iCloud (India)", q + " icloud leak india photos videos", "web"});
+        jobs.add(new String[]{"iCloud (Local)", q + " icloud leak local photos exposed", "web"});
+        jobs.add(new String[]{"iCloud (International)", q + " icloud leak international photos videos", "web"});
+        // Google Drive
+        jobs.add(new String[]{"Google Drive", q + " site:drive.google.com leak photo video", "web"});
+        jobs.add(new String[]{"Drive Photos", q + " drive.google.com photos leak exposed", "web"});
+        // Cloud leaks
+        jobs.add(new String[]{"Dropbox", q + " site:dropbox.com leak photo video", "web"});
+        jobs.add(new String[]{"OneDrive", q + " site:onedrive.com leak", "web"});
+        jobs.add(new String[]{"Google Photos", q + " site:photos.google.com leak exposed", "web"});
+        // Telecom
+        jobs.add(new String[]{"SIM Swap", q + " SIM swap leak exposed data", "web"});
+        jobs.add(new String[]{"Call Logs", q + " call log detail leak exposed", "web"});
+        jobs.add(new String[]{"SMS Leaks", q + " SMS text message leak dump", "web"});
+        jobs.add(new String[]{"Carrier Breach", q + " telecom carrier data breach", "web"});
+        // Email leaks
+        if (!email.isEmpty()) {
+            jobs.add(new String[]{"HPB (Pwned)", email + " haveibeenpwned.com breach pwned", "web"});
+            jobs.add(new String[]{"DeHashed", email + " dehashed.com search", "web"});
+            jobs.add(new String[]{"LeakCheck", email + " leakcheck.io search", "web"});
+            jobs.add(new String[]{"EmailRep", email + " emailrep.io reputation", "web"});
+            jobs.add(new String[]{"Email Leak", email + " leak breach pwned exposed", "web"});
+        }
+        // Dating apps (local Indian + international)
+        jobs.add(new String[]{"Tinder", q + " site:tinder.com leak photo exposed", "web"});
+        jobs.add(new String[]{"Bumble", q + " site:bumble.com leak photo", "web"});
+        jobs.add(new String[]{"Hinge", q + " site:hinge.co leak photo", "web"});
+        jobs.add(new String[]{"Grindr", q + " site:grindr.com leak photo", "web"});
+        jobs.add(new String[]{"OkCupid", q + " site:okcupid.com leak", "web"});
+        jobs.add(new String[]{"PlentyOfFish", q + " site:pof.com leak", "web"});
+        jobs.add(new String[]{"TrulyMadly (India)", q + " truly madly india dating leak", "web"});
+        jobs.add(new String[]{"Aisle (India)", q + " aisle matrimony india dating leak", "web"});
+        jobs.add(new String[]{"Shaadi.com (India)", q + " shaadi.com profile leak", "web"});
+        jobs.add(new String[]{"Intl Dating", q + " international dating site leak exposed", "web"});
+        // Google Dorks
+        jobs.add(new String[]{"Dork: Social Sites", q + " site:instagram.com OR site:facebook.com OR site:twitter.com OR site:snapchat.com", "web"});
+        jobs.add(new String[]{"Dork: File Types", q + " filetype:pdf OR filetype:xls OR filetype:csv OR filetype:jpg", "web"});
+        jobs.add(new String[]{"Dork: Passwords", q + " password login credentials leak exposed", "web"});
+        // Darkweb / Onionsite
+        jobs.add(new String[]{"Darkweb (Tor)", q + " darkweb onion site leak exposed", "web"});
+        jobs.add(new String[]{"Onion Sites", q + " onion site dark web data", "web"});
+
+        int total = jobs.size();
+        int resultsFound = 0, noResults = 0;
+        status.setText("⚡ " + total + " sources... 0/" + total);
+        progressBar.setVisibility(View.VISIBLE);
+        web.loadDataWithBaseURL(null, "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><body style='font:16px Arial;padding:18px;background:#0b1020;color:#eef4ff'><h2>⚡ One-Tap Mega Search</h2><p>Searching " + total + " sources. Takes 30-60 seconds.</p></body>", "text/html", "UTF-8", null);
+        web.setVisibility(View.VISIBLE);
+
+        new Thread(() -> {
+            int done = 0;
+            StringBuilder resultsHtml = new StringBuilder();
+            for (String[] job : jobs) {
+                String category = job[0], jobQuery = job[1], type = job[2];
+                try {
+                    ArrayList<String[]> results; ArrayList<String> images;
+                    if (type.equals("images")) {
+                        images = fetchBingImages(jobQuery);
+                        results = fetchBingResults(jobQuery + " photos images pictures", category);
+                    } else if (type.equals("reverse") || type.equals("face")) {
+                        results = fetchBingResults(jobQuery + " " + type + " search identification", category);
+                        images = fetchBingImages(jobQuery);
+                    } else {
+                        results = fetchBingResults(jobQuery, category);
+                        images = fetchBingImages(jobQuery);
+                    }
+                    if (!results.isEmpty() || !images.isEmpty()) {
+                        resultsFound++;
+                        resultsHtml.append("<div class='card'><h3>").append(category)
+                            .append(" <span class='count'>").append(results.size()).append(" found</span></h3>");
+                        for (String[] r : results) {
+                            resultsHtml.append("<div class='result'><a href='").append(r[2]).append("'>")
+                                .append(escapeHtml(r[1])).append("</a>");
+                            if (!r[3].isEmpty()) resultsHtml.append("<div class='snippet'>").append(escapeHtml(r[3])).append("</div>");
+                            resultsHtml.append("</div>");
+                        }
+                        if (!images.isEmpty()) {
+                            resultsHtml.append("<div class='imggrid'>");
+                            for (String img : images) resultsHtml.append("<img src='").append(img).append("' loading='lazy'>");
+                            resultsHtml.append("</div>");
+                        }
+                        resultsHtml.append("</div>");
+                    } else { noResults++; resultsHtml.append("<div class='card'><h3>").append(category).append(" <span class='fail'>no results</span></h3></div>"); }
+                } catch (Exception e) {
+                    noResults++;
+                    resultsHtml.append("<div class='card'><h3>").append(category).append(" <span class='fail'>").append(escapeHtml(e.getMessage())).append("</span></h3></div>");
+                }
+                done++;
+                final int d = done;
+                runOnUiThread(() -> {
+                    status.setText("⚡ " + total + " sources... " + d + "/" + total + " (" + category + ")");
+                    progressBar.setProgress((int)(d * 100f / total));
+                });
+            }
+            String finalHtml = "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                + "<style>body{font:15px Arial;padding:14px;background:#0b1020;color:#eef4ff;margin:0}"
+                + "h2{color:#7dd3fc;margin:8px 0}h3{color:#a5f3fc;margin:12px 0 4px}"
+                + ".card{background:#1e293b;border-radius:8px;padding:10px;margin:8px 0}"
+                + ".result{background:#0f172a;border-radius:6px;padding:8px;margin:6px 0}"
+                + "a{color:#7dd3fc}.snippet{color:#94a3b8;font-size:13px;margin-top:4px}"
+                + "img{max-width:100%;border-radius:6px;margin:4px 0}"
+                + ".fail{color:#f87171}.count{color:#fbbf24;font-weight:bold}"
+                + ".imggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}</style><body>"
+                + "<h1>⚡ Mega Search Report</h1>"
+                + "<p>Query: <b>" + escapeHtml(query) + "</b>"
+                + (email.isEmpty()?"":" | Email: <b>"+escapeHtml(email)+"</b>")
+                + (phone.isEmpty()?"":" | Phone: <b>"+escapeHtml(phone)+"</b>") + "</p>"
+                + "<p>Searched: <b>" + total + "</b> | Found: <b>" + resultsFound + "</b> | None: <b>" + noResults + "</b></p>"
+                + resultsHtml.toString()
+                + "</body>";
+            runOnUiThread(() -> {
+                web.loadDataWithBaseURL(null, finalHtml, "text/html", "UTF-8", null);
+                status.setText("✅ Done. " + resultsFound + "/" + total + " sources had results.");
+                progressBar.setVisibility(View.GONE);
+            });
+        }).start();
+    }

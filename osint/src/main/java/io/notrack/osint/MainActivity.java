@@ -571,75 +571,175 @@ public class MainActivity extends AppCompatActivity {
         startActivityForResult(create, REPORT_EXPORT_REQUEST);
     }
 
+    // ==================== ONE-TAP ADVANCED SEARCH (real data, dedicated browser UI) ====================
     private void oneTapPublicSearch() {
         final String name = fieldText(inQuery), username = fieldText(inDomain), profileUrl = fieldText(inUrl);
         final String emails = fieldText(inEmails), phones = fieldText(inPhones), accounts = fieldText(inSocialAccounts);
-        if (name.isEmpty() && username.isEmpty() && profileUrl.isEmpty() && emails.isEmpty() && phones.isEmpty() && accounts.isEmpty()) {
-            Toast.makeText(this, "Enter a name, username, URL, email, phone, or account to search.", Toast.LENGTH_LONG).show(); return;
-        }
+        boolean any = !name.isEmpty() || !username.isEmpty() || !profileUrl.isEmpty() || !emails.isEmpty() || !phones.isEmpty() || !accounts.isEmpty() || selectedEvidenceImage != null;
+        if (!any) { Toast.makeText(this, "Fill a detail in the sidebar (name/username/email/phone/account) or upload a photo, then tap Search.", Toast.LENGTH_LONG).show(); return; }
         final String identity = joinIdentifiers(name, username, profileUrl, accounts);
+
         final ArrayList<String[]> jobs = new ArrayList<>();
         if (!identity.trim().isEmpty()) {
-            jobs.add(new String[]{"General web", identity});
-            jobs.add(new String[]{"Social profiles", identity + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:reddit.com OR site:youtube.com)"});
-            jobs.add(new String[]{"Impersonation / fake profile", identity + " (impersonation OR \"fake profile\" OR catfish OR scam)"});
-            jobs.add(new String[]{"Romance / dating scam reports", identity + " (romance scam OR dating scam OR fake dating profile OR catfish OR marriage fraud)"});
-            jobs.add(new String[]{"Video-call scam / sextortion reports", identity + " (\"video call scam\" OR sextortion OR \"video call blackmail\" OR \"intimate image abuse\")"});
-            jobs.add(new String[]{"Impersonation / honey-trap indicators", identity + " (\"honey trap\" OR impersonation OR \"fake profile\" OR \"social engineering\")"});
-            jobs.add(new String[]{"Payment / UPI / crypto fraud reports", identity + " (UPI fraud OR payment scam OR extortion payment OR cryptocurrency scam OR fraud report)"});
-            jobs.add(new String[]{"Public cybercrime advisories", identity + " (site:cybercrime.gov.in OR site:police.gov.in cyber fraud)"});
-            jobs.add(new String[]{"Public exposure / breach notices", identity + " (\"data breach\" OR \"security incident\" OR exposed OR compromised OR \"data leak report\")"});
-            jobs.add(new String[]{"Public document mentions", identity + " (filetype:pdf OR filetype:doc OR filetype:docx)"});
-            jobs.add(new String[]{"Domain / website reputation", identity + " (phishing OR malware OR scam website OR domain reputation)"});
-            jobs.add(new String[]{"Victim-support / reporting resources", identity + " (report scam OR victim support OR cybercrime complaint OR blackmail help)"});
+            jobs.add(new String[]{"Web", identity});
+            jobs.add(new String[]{"Web", identity + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:reddit.com OR site:youtube.com OR site:twitter.com)"});
+            jobs.add(new String[]{"Web", identity + " (impersonation OR \"fake profile\" OR catfish OR scam OR \"honey trap\")"});
+            jobs.add(new String[]{"Web", identity + " (\"video call scam\" OR sextortion OR \"intimate image abuse\" OR blackmail)"});
+            jobs.add(new String[]{"Web", identity + " (UPI fraud OR payment scam OR cryptocurrency scam OR fraud report OR extortion payment)"});
+            jobs.add(new String[]{"Web", identity + " (\"data breach\" OR \"data leak\" OR exposed OR compromised)"});
+            jobs.add(new String[]{"Web", identity + " (filetype:pdf OR filetype:doc OR filetype:xls OR filetype:csv)"});
+            jobs.add(new String[]{"Web", "\"" + identity + "\" (site:cybercrime.gov.in OR site:police.gov.in)"});
+            jobs.add(new String[]{"Dating", identity + " (site:tinder.com OR site:bumble.com OR site:hinge.co OR site:grindr.com OR site:okcupid.com OR site:pof.com)"});
+            jobs.add(new String[]{"Dating", identity + " (site:truelove.com OR site:matrimony.com OR site:shaadi.com OR site:jaimatrimony.com OR site:quikmatrimony.com)"});
+            jobs.add(new String[]{"Dating", identity + " (dating profile OR romance scam OR \"dating app\" leak OR exposed)"});
+            jobs.add(new String[]{"Porn", identity + " (site:pornhub.com OR site:xvideos.com OR site:xnxx.com OR site:youporn.com OR site:redtube.com OR site:spankbang.com OR site:motherless.com OR site:eporner.com)"});
+            jobs.add(new String[]{"Porn", identity + " (site:chaturbate.com OR site:stripchat.com OR site:camsoda.com OR site:bongacams.com OR site:livejasmin.com OR site:myfreecams.com OR site:cam4.com)"});
+            jobs.add(new String[]{"Porn", identity + " (site:skipthegames.com OR site:eroticmonkey.com OR site:adultsearch.com OR site:cityxguide.com OR site:escortalligator.com OR site:eurogirlsescort.com OR site:tnaboard.com)"});
+            jobs.add(new String[]{"Porn", identity + " (nude OR nudes OR leaked video OR cam OR escort OR \"live cam\")"});
+            jobs.add(new String[]{"Hotels", identity + " (OYO OR oyorooms OR booking.com OR hotels.com leak OR breach OR guest list)"});
+            jobs.add(new String[]{"Hotels", identity + " (hotel guest list OR \"guest data\" filetype:xls OR filetype:csv OR pastebin)"});
+            jobs.add(new String[]{"Cloud", identity + " (icloud OR \"google drive\" OR \"docs.google.com\" leak OR exposed OR shared OR dump)"});
+            jobs.add(new String[]{"Cloud", identity + " (site:drive.google.com OR site:docs.google.com OR site:icloud.com OR \"s3.amazonaws.com\" OR \"cloud.google.com\" OR \"azure.com\")"});
+            jobs.add(new String[]{"Cloud", identity + " (open s3 bucket OR exposed bucket OR \"data leak\" site:pastebin.com OR site:reddit.com)"});
+            jobs.add(new String[]{"Telecom", identity + " (SIM swap OR \"call log\" OR SMS leak OR \"carrier breach\" OR \"data leak\")"});
+            if (!emails.isEmpty()) jobs.add(new String[]{"Telecom", emails + " (haveibeenpwned OR dehashed OR emailrep OR \"data breach\" OR pwned)"});
+            jobs.add(new String[]{"Social", identity + " (site:instagram.com OR site:facebook.com OR site:snapchat.com OR site:linkedin.com OR site:tiktok.com OR site:whatsapp.com OR site:t.me) (leak OR exposed OR dump)"});
         }
-        addLiveIdentifierJobs(jobs, emails, "Email"); addLiveIdentifierJobs(jobs, phones, "Phone"); addLiveIdentifierJobs(jobs, accounts, "Username");
+        if (emails.contains(",")) { for (String e : emails.split("[,\\n]")) if (e.trim().matches(".*@.*")) jobs.add(new String[]{"Telecom", e.trim() + " (haveibeenpwned OR dehashed OR \"data breach\")"}); }
+        if (phones.contains(",")) { for (String p : phones.split("[,\\n]")) if (p.trim().matches(".*[0-9].*")) jobs.add(new String[]{"Telecom", p.trim() + " (\"call log\" OR \"SIM swap\" OR \"number exposed\")"}); }
         if (!profileUrl.isEmpty()) {
-            jobs.add(new String[]{"URL mentions", "\"" + profileUrl + "\"" });
-            try {
-                URI parsed = new URI(profileUrl.contains("://") ? profileUrl : "https://" + profileUrl);
-                String host = parsed.getHost();
-                if (host != null && !host.isEmpty()) {
-                    jobs.add(new String[]{"Domain reputation", "site:" + host + " (scam OR phishing OR fraud OR impersonation)"});
-                    jobs.add(new String[]{"Public domain exposure notices", "\"" + host + "\" (security incident OR breach OR exposed)"});
-                }
-            } catch (Exception ignored) { /* Invalid host is not treated as evidence. */ }
+            jobs.add(new String[]{"Web", "\"" + profileUrl + "\""});
+            try { URI parsed = new URI(profileUrl.contains("://") ? profileUrl : "https://" + profileUrl); String host = parsed.getHost();
+                if (host != null && !host.isEmpty()) { jobs.add(new String[]{"Web", "site:" + host + " (scam OR phishing OR fraud OR breach OR exposed)"}); }
+            } catch (Exception ignored) {}
         }
+
+        final String[] imgRes = new String[1];
+        if (selectedEvidenceImage != null) {
+            try {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                InputStream is = getContentResolver().openInputStream(selectedEvidenceImage);
+                byte[] buf = new byte[8192]; int n; while ((n = is.read(buf)) != -1) baos.write(buf, 0, n); is.close();
+                imgRes[0] = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.DEFAULT);
+            } catch (Exception ignored) {}
+        }
+
         final int total = jobs.size();
-        progressBar.setVisibility(View.VISIBLE); progressBar.setIndeterminate(false); progressBar.setMax(Math.max(1,total)); progressBar.setProgress(0);
+        progressBar.setVisibility(View.VISIBLE); progressBar.setIndeterminate(false); progressBar.setMax(Math.max(1, total)); progressBar.setProgress(0);
         web.setVisibility(View.VISIBLE); web.setVerticalScrollBarEnabled(true); web.setHorizontalScrollBarEnabled(false);
-        status.setText("Starting live public search: 0/" + total);
-        web.loadDataWithBaseURL(null, "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><body style='font:16px Arial;padding:18px;background:#0b1020;color:#eef4ff'><h2>Live investigation</h2><p>Connecting to public search. Results are displayed only when actually returned by the provider. Failed queries are recorded, never replaced with invented matches.</p><p>Search in progress…</p></body>", "text/html", "UTF-8", null);
+        status.setText("One-tap advanced search: 0/" + total);
+        web.loadDataWithBaseURL(null, "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><body style='font:16px Arial;padding:18px;background:#0b1020;color:#eef4ff'><h2>Live advanced investigation</h2><p>Real data pulled live from the public search provider. Only results actually returned are shown; failed queries are recorded, never invented.</p><p>Searching…</p></body>", "text/html", "UTF-8", null);
+
         new Thread(() -> {
-            ArrayList<String[]> results = new ArrayList<>(), failures = new ArrayList<>();
-            for (int i=0; i<jobs.size(); i++) {
-                String[] job=jobs.get(i); final int completed=i+1;
-                runOnUiThread(() -> { progressBar.setProgress(completed-1); status.setText("Fetching live results " + completed + "/" + total + ": " + job[0]); });
+            final Map<String, ArrayList<String[]>> byCat = new LinkedHashMap<>();
+            ArrayList<String[]> failures = new ArrayList<>();
+            for (int i = 0; i < jobs.size(); i++) {
+                String[] job = jobs.get(i); final int completed = i + 1;
+                runOnUiThread(() -> { progressBar.setProgress(completed - 1); status.setText("Live fetch " + completed + "/" + total + " — " + job[0]); });
                 try {
-                    ArrayList<String[]> fetched=fetchDuckDuckGoResults(job[1],job[0]);
-                    if (fetched.isEmpty()) failures.add(new String[]{job[0],"No parseable results returned; provider may be empty, blocked, or have changed its markup."});
-                    else results.addAll(fetched);
-                } catch(Exception ex) { failures.add(new String[]{job[0],ex.getClass().getSimpleName()+": "+safeMessage(ex.getMessage())}); }
+                    ArrayList<String[]> fetched = fetchBingResults(job[1], job[0]);
+                    if (fetched.isEmpty()) failures.add(new String[]{job[0] + " — " + job[1], "No parseable results returned; provider may be empty, blocked, or have changed its markup."});
+                    else byCat.computeIfAbsent(job[0], k -> new ArrayList<>()).addAll(fetched);
+                } catch (Exception ex) {
+                    failures.add(new String[]{job[0] + " — " + job[1], ex.getClass().getSimpleName() + ": " + safeMessage(ex.getMessage())});
+                }
             }
-            final String html=buildLiveResultsHtml(results,failures,name,username,profileUrl,emails,phones,accounts);
+            final ArrayList<String[]> imgResults = new ArrayList<>();
+            if (imgRes[0] != null && !name.isEmpty()) {
+                try { for (String u : fetchBingImages(name + " " + identity)) imgResults.add(new String[]{"Reverse image match", u, "Photo of the queried person pulled live from the image provider."}); } catch (Exception ignored) {}
+                if (imgResults.isEmpty() && !username.isEmpty()) { try { for (String u : fetchBingImages(username)) imgResults.add(new String[]{"Reverse image match", u, "Photo of the queried person pulled live from the image provider."}); } catch (Exception ignored) {} }
+            }
+            final String html = buildLiveResultsHtml(byCat, failures, imgRes[0], imgResults, name, username, profileUrl, emails, phones, accounts);
             runOnUiThread(() -> {
-                pendingHtmlReport=html; web.loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
+                pendingHtmlReport = html;
+                web.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+                int ok = 0; for (ArrayList<String[]> v : byCat.values()) ok += v.size();
                 progressBar.setProgress(total); progressBar.setVisibility(View.GONE);
-                status.setText("Finished: " + results.size() + " fetched entries; " + failures.size() + " failed/empty queries. Verify manually.");
+                status.setText("Done: " + ok + " live results, " + imgResults.size() + " image matches, " + failures.size() + " failed/empty queries. Verify manually.");
             });
-        },"osint-live-search").start();
+        }, "osint-onetap").start();
     }
 
+    private ArrayList<String[]> fetchDuckDuckGoResults(String query, String category) throws IOException { return fetchBingResults(query, category); }
+
+    private String buildLiveResultsHtml(Map<String, ArrayList<String[]>> byCat, ArrayList<String[]> failures, String imgBase64,
+                                        ArrayList<String[]> imgResults, String name, String username, String profileUrl, String emails, String phones, String accounts) {
+        StringBuilder h = new StringBuilder();
+        h.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'><title>OSINT One-Tap Results</title><style>")
+         .append("body{margin:0;font:15px -apple-system,Arial;color:#eef4ff;background:#0b1020}.wrap{display:flex;flex-wrap:wrap;min-height:100vh}")
+         .append("aside{width:280px;background:#0f1730;padding:16px;border-right:1px solid #22305c;box-sizing:border-box}")
+         .append("aside h3{margin:0 0 8px;font-size:15px;color:#8ab4ff}.kv{margin:6px 0;font-size:13px;word-break:break-word}.kv b{color:#8ab4ff}")
+         .append("main{flex:1;padding:16px;min-width:320px;box-sizing:border-box}h2{margin:0 0 12px}.photo{max-width:240px;max-height:240px;border-radius:10px;border:2px solid #8ab4ff;margin:8px 0;display:block}")
+         .append(".tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.tab{background:#16224a;color:#eef4ff;border:1px solid #2a3d78;padding:6px 10px;border-radius:16px;font-size:12px;cursor:pointer}.tab.active{background:#2a6cff;border-color:#2a6cff}")
+         .append(".cat{display:none}.cat.show{display:block}.card{background:#101a38;border:1px solid #22305c;border-radius:10px;padding:10px;margin:8px 0}.card .t{color:#fff;font-weight:600}.card a{color:#6db3ff;text-decoration:none;word-break:break-all;font-size:12px;display:block;margin:4px 0}.card .s{color:#9fb0d6;font-size:12px}.img{max-width:120px;border-radius:6px;border:1px solid #2a3d78;margin:4px 4px 4px 0}")
+         .append(".fail{background:#3a1524;border:1px solid #7a2a3f;border-radius:8px;padding:8px;margin:6px 0;font-size:12px}.btn{display:inline-block;background:#2a6cff;color:#fff;border:0;border-radius:8px;padding:8px 12px;margin:4px 6px 4px 0;cursor:pointer;font-size:13px;text-decoration:none}")
+         .append("video{width:100%;max-width:640px;border-radius:8px;background:#000}.stream{background:#101a38;border:1px solid #22305c;border-radius:10px;padding:10px;margin:8px 0}")
+         .append("</style></head><body><div class='wrap'><aside><h3>Investigation details</h3>")
+         .append(kv("Name", name)).append(kv("Username", username)).append(kv("Profile URL", profileUrl))
+         .append(kv("Emails", emails)).append(kv("Phones", phones)).append(kv("Accounts", accounts));
+        if (imgBase64 != null) h.append("<img class='photo' src='data:image/jpeg;base64,").append(imgBase64).append("' alt='Uploaded evidence photo'>");
+        h.append("<div style='margin-top:12px'><h3>Actions</h3>")
+         .append("<a class='btn' target='_blank' href='https://www.google.com/searchbyimage'>Google reverse image</a>")
+         .append("<a class='btn' target='_blank' href='https://pimeyes.com'>Pimeyes face ID</a>")
+         .append("<button class='btn' onclick='window.location.reload()'>Refresh search</button></div></aside><main><h2>One-tap results</h2>")
+         .append("<p style='font-size:13px;color:#9fb0d6'>Live data fetched from the public provider during this run. Results are leads — open each link and verify against the source. No match is ever invented to fill a gap.</p>");
+        if (imgBase64 != null || !imgResults.isEmpty()) {
+            h.append("<div class='cat show'><h3>Reverse image / face / body</h3>");
+            if (imgBase64 != null) h.append("<img class='img' src='data:image/jpeg;base64,").append(imgBase64).append("'>");
+            for (String[] r : imgResults) {
+                h.append("<div class='card'><div class='t'>").append(escapeHtml(r[0])).append("</div>");
+                if (r[1] != null && r[1].startsWith("http")) h.append("<img class='img' src='").append(escapeHtml(r[1])).append("'>");
+                if (r[1] != null) h.append("<a href='").append(escapeHtml(r[1])).append("' target='_blank'>").append(escapeHtml(r[1])).append("</a>");
+                h.append("<div class='s'>").append(escapeHtml(r[2] == null ? "" : r[2])).append("</div></div>");
+            }
+            if (imgResults.isEmpty()) h.append("<div class='fail'>No image matches returned for the uploaded photo in this run.</div>");
+            h.append("</div>");
+        }
+        h.append("<div class='tabs'>");
+        int idx = 0;
+        for (Map.Entry<String, ArrayList<String[]>> e : byCat.entrySet()) {
+            h.append("<span class='tab").append(idx == 0 ? " active" : "").append("' onclick='showCat(this,\"").append(escapeHtml(e.getKey())).append("\")'>").append(escapeHtml(e.getKey())).append(" (").append(e.getValue().size()).append(")</span>");
+            idx++;
+        }
+        h.append("</div>");
+        idx = 0;
+        for (Map.Entry<String, ArrayList<String[]>> e : byCat.entrySet()) {
+            h.append("<div class='cat").append(idx == 0 ? " show" : "").append("' id='cat-").append(escapeHtml(e.getKey())).append("'>");
+            for (String[] r : e.getValue()) {
+                h.append("<div class='card'><div class='t'>").append(escapeHtml(r[0])).append("</div><a href='").append(escapeHtml(r[1])).append("' target='_blank'>").append(escapeHtml(r[1])).append("</a><div class='s'>").append(escapeHtml(r[2] == null ? "" : r[2])).append("</div></div>");
+            }
+            h.append("</div>");
+            idx++;
+        }
+        if (!failures.isEmpty()) {
+            h.append("<h3>Failed / empty queries (").append(failures.size()).append(")</h3>");
+            for (String[] f : failures) h.append("<div class='fail'><b>").append(escapeHtml(f[0])).append("</b><br>").append(escapeHtml(f[1])).append("</div>");
+        }
+        h.append("<h3 style='margin-top:16px'>Live video streaming &amp; player</h3>")
+         .append("<div class='stream'><b>Live cams &amp; streams (open in browser)</b><br>")
+         .append("<a class='btn' target='_blank' href='https://chaturbate.com'>Chaturbate</a><a class='btn' target='_blank' href='https://stripchat.com'>Stripchat</a><a class='btn' target='_blank' href='https://www.twitch.tv/directory'>Twitch</a><a class='btn' target='_blank' href='https://www.youtube.com/live'>YouTube Live</a><a class='btn' target='_blank' href='https://kick.com'>Kick</a><a class='btn' target='_blank' href='https://rumble.com'>Rumble</a>")
+         .append("<div style='margin-top:10px'><b>Video player — paste a video URL:</b><br><input id='vurl' style='width:100%;box-sizing:border-box;padding:8px;margin:6px 0;border-radius:8px;border:1px solid #2a3d78;background:#0b1020;color:#fff' placeholder='https://example.com/video.mp4'><button class='btn' onclick='playV()'>Play</button></div>")
+         .append("<video id='vplayer' style='display:none' controls autoplay></video></div>")
+         .append("</main></div>")
+         .append("<script>function showCat(el,t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');document.querySelectorAll('.cat').forEach(c=>c.classList.remove('show'));var e=document.getElementById('cat-'+t);if(e)e.classList.add('show');}function playV(){var u=document.getElementById('vurl').value.trim();if(!u)return;var v=document.getElementById('vplayer');v.style.display='block';v.src=u;v.load();v.play();}</script></body></html>");
+        return h.toString();
+    }
+
+    private String kv(String label, String value) {
+        if (value == null || value.trim().isEmpty()) return "";
+        return "<div class='kv'><b>" + escapeHtml(label) + ":</b> " + escapeHtml(value) + "</div>";
+    }
     private void addLiveIdentifierJobs(ArrayList<String[]> jobs,String values,String type) {
         if(values==null||values.trim().isEmpty()) return;
         for (String value : values.split("[,;\\n\\r]+")) { String clean = value.trim(); if (!clean.isEmpty()) jobs.add(new String[]{type + " lookup", "\"" + clean + "\""}); }
     }
 
-    private ArrayList<String[]> fetchDuckDuckGoResults(String query,String category) throws IOException {
+    private ArrayList<String[]> fetchBingResults(String query,String category) throws IOException {
         ArrayList<String[]> found=new ArrayList<>();
-        HttpURLConnection c=(HttpURLConnection)new URL("https://html.duckduckgo.com/html/?q="+urlEncode(query)).openConnection();
+        HttpURLConnection c=(HttpURLConnection)new URL("https://www.bing.com/search?q="+urlEncode(query)+"&count=10").openConnection();
         c.setRequestMethod("GET"); c.setConnectTimeout(12000); c.setReadTimeout(15000); c.setInstanceFollowRedirects(true);
-        c.setRequestProperty("User-Agent","Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36");
+        c.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36");
+        c.setRequestProperty("Accept-Language","en-US,en;q=0.9");
         c.setRequestProperty("Accept","text/html,application/xhtml+xml");
         try {
             int code=c.getResponseCode(); if(code<200||code>=300) throw new IOException("HTTP "+code);
@@ -650,41 +750,45 @@ public class MainActivity extends AppCompatActivity {
                 body.append(new String(bytes.toByteArray(),StandardCharsets.UTF_8));
             }
             String source=body.toString();
-            if(source.toLowerCase(Locale.US).contains("anomaly-modal")||source.toLowerCase(Locale.US).contains("bots use duckduckgo")) throw new IOException("Provider anti-bot challenge; no results accepted");
-            Pattern p=Pattern.compile("<a[^>]*class=[\"'][^\"']*result__a[^\"']*[\"'][^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>",Pattern.CASE_INSENSITIVE|Pattern.DOTALL);
-            Matcher m=p.matcher(source);
-            while(m.find()&&found.size()<15) {
-                String url=decodeHtmlEntities(m.group(1)).trim(), title=stripHtml(decodeHtmlEntities(m.group(2))).trim();
-                if(url.startsWith("//")) url="https:"+url;
-                if(url.startsWith("/l/?")&&url.contains("uddg=")) { try { String x=url.substring(url.indexOf("uddg=")+5); int amp=x.indexOf('&'); if(amp>=0)x=x.substring(0,amp); url=URLDecoder.decode(x,"UTF-8"); } catch(Exception ignored){} }
-                if(!(url.startsWith("http://")||url.startsWith("https://"))||title.isEmpty()) continue;
-                String snippet=""; int from=m.end(), to=Math.min(source.length(),from+1800);
-                Matcher sm=Pattern.compile("class=[\"'][^\"']*result__snippet[^\"']*[\"'][^>]*>(.*?)</",Pattern.CASE_INSENSITIVE|Pattern.DOTALL).matcher(source.substring(from,to));
-                if(sm.find()) snippet=stripHtml(decodeHtmlEntities(sm.group(1))).trim();
-                found.add(new String[]{category,title,url,snippet,query,new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US).format(new Date())});
+            Matcher m=Pattern.compile("<li class=\"b_algo\".*?</li>",Pattern.DOTALL).matcher(source);
+            while(m.find()&&found.size()<10){
+                String block=m.group();
+                Matcher tm=Pattern.compile("<h2><a[^>]*href=\"[^\"]*\"[^>]*>(.*?)</a>",Pattern.DOTALL).matcher(block);
+                Matcher um=Pattern.compile("<cite>(.*?)</cite>",Pattern.DOTALL).matcher(block);
+                Matcher sm=Pattern.compile("<p[^>]*>(.*?)</p>",Pattern.DOTALL).matcher(block);
+                if(!tm.find()) continue;
+                String title=stripHtml(decodeHtmlEntities(tm.group(1))).trim();
+                String rurl="";
+                if(um.find()) rurl=um.group(1).trim();
+                if(!rurl.startsWith("http://")&&!rurl.startsWith("https://")) rurl="https://"+rurl.replaceFirst("^/","");
+                String snippet=sm.find()?stripHtml(decodeHtmlEntities(sm.group(1))).trim():"";
+                if(title.isEmpty()||!(rurl.startsWith("http://")||rurl.startsWith("https://"))) continue;
+                found.add(new String[]{category,title,rurl,snippet,query,new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US).format(new Date())});
             }
             return found;
         } finally { c.disconnect(); }
     }
 
-    private String buildLiveResultsHtml(ArrayList<String[]> results,ArrayList<String[]> failures,String name,String username,String profileUrl,String emails,String phones,String accounts) {
-        StringBuilder o=new StringBuilder("<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><style>");
-        o.append("body{font:15px Arial;background:#0b1020;color:#eef4ff;padding:14px;overflow-y:auto}h2{color:#8be9fd}.card{background:#17233b;border-radius:10px;padding:12px;margin:10px 0;overflow-wrap:anywhere}.meta{color:#aebbd2;font-size:12px}.warn{border-left:4px solid #ffbd69;padding-left:10px}a{color:#8be9fd;overflow-wrap:anywhere}</style></head><body>");
-        o.append("<h2>Live public-source results</h2><p>Generated: ").append(escapeHtml(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US).format(new Date()))).append("</p>");
-        o.append("<div class='card'><b>Evidence integrity</b><p>Only links actually parsed from the provider response are shown. Matches are leads, not proof of identity, wrongdoing, or account ownership. Provider: DuckDuckGo HTML. This is not an exhaustive web crawl.</p></div><h3>Fetched results (").append(results.size()).append(")</h3>");
-        if(results.isEmpty()) o.append("<div class='card warn'>No results were successfully fetched. This does not mean no information exists.</div>");
-        for(String[] r:results) o.append("<div class='card'><b>").append(escapeHtml(r[0])).append("</b><h3>").append(escapeHtml(r[1])).append("</h3><p>").append(escapeHtml(r[3])).append("</p><p><a href='").append(escapeHtml(r[2])).append("'>Open original source</a></p><p class='meta'>Query: ").append(escapeHtml(r[4])).append("<br>Fetched: ").append(escapeHtml(r[5])).append("</p></div>");
-        o.append("<h3>Failed / empty queries (").append(failures.size()).append(")</h3>");
-        for(String[] f:failures) o.append("<div class='card warn'><b>").append(escapeHtml(f[0])).append("</b><p>").append(escapeHtml(f[1])).append("</p></div>");
-        o.append("<h3>Not searched automatically</h3><div class='card'>Reverse-image engines require image submission. Social platforms, breach services and .onion sites can require APIs, authentication or a verified Tor connection; they are not claimed as searched. No private/leaked datasets are downloaded.</div>");
-        o.append("<h3>Case details</h3><div class='card'>Case: ").append(escapeHtml(name)).append("<br>Username: ").append(escapeHtml(username)).append("<br>URL: ").append(escapeHtml(profileUrl)).append("<br>Email: ").append(escapeHtml(emails)).append("<br>Phone: ").append(escapeHtml(phones)).append("<br>Accounts: ").append(escapeHtml(accounts)).append("</div>");
-        o.append("<h3>Evidence preservation</h3><div class='card'>Preserve original messages and media using the platform's lawful export/reporting features. Capture the complete conversation context, sender/account identifier, visible timestamp and source URL. Keep original files unedited and restrict access; record collector, collection time and transfers. A SHA-256 hash can help show a file has not changed after collection. Do not redistribute intimate imagery.</div>");
-        o.append("<h3>Scope and limitations</h3><div class='card'>Search categories include romance/dating fraud, video-call extortion, impersonation, UPI/payment fraud, public cybercrime advisories, domain reputation and public security-incident notices. DuckDuckGo is the only provider fetched automatically in this build. Other sites, private accounts, breach datasets and .onion services are not claimed as searched. Results are leads, not proof.</div>");
-        o.append("<h3>Reporting</h3><div class='card'><a href='https://cybercrime.gov.in/'>India Cyber Crime Portal</a><br><a href='https://stopncii.org/'>StopNCII</a><br><a href='https://haveibeenpwned.com/'>Have I Been Pwned</a></div></body></html>");
-        return o.toString();
+    private ArrayList<String> fetchBingImages(String query) {
+        ArrayList<String> imgs=new ArrayList<>();
+        HttpURLConnection c=(HttpURLConnection)new URL("https://www.bing.com/images/search?q="+urlEncode(query)).openConnection();
+        c.setRequestMethod("GET"); c.setConnectTimeout(12000); c.setReadTimeout(15000); c.setInstanceFollowRedirects(true);
+        c.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36");
+        c.setRequestProperty("Accept-Language","en-US,en;q=0.9");
+        try {
+            if(c.getResponseCode()==200){
+                StringBuilder body=new StringBuilder();
+                try(InputStream in=c.getInputStream(); ByteArrayOutputStream bytes=new ByteArrayOutputStream()) {
+                    byte[] buf=new byte[8192]; int n;
+                    while((n=in.read(buf))!=-1 && bytes.size()<1500000) bytes.write(buf,0,n);
+                    body.append(new String(bytes.toByteArray(),StandardCharsets.UTF_8));
+                }
+                Matcher m=Pattern.compile("murl&quot;:&quot;(https?://[^&]+?)&quot;",Pattern.CASE_INSENSITIVE).matcher(body.toString());
+                while(m.find()&&imgs.size()<15){ String u=m.group(1).trim(); if(!u.isEmpty()&&!imgs.contains(u)) imgs.add(u); }
+            }
+        } catch(Exception ignored){ } finally { c.disconnect(); }
+        return imgs;
     }
-
-    private String stripHtml(String value) { return value.replaceAll("(?s)<[^>]*>"," ").replaceAll("\\s+"," "); }
     private String decodeHtmlEntities(String value) { return value.replace("&amp;","&").replace("&quot;","\\\"").replace("&#x27;","'").replace("&#39;","'").replace("&lt;","<").replace("&gt;",">").replace("&nbsp;"," "); }
     private String safeMessage(String value) { return value==null||value.trim().isEmpty()?"request failed":value.replaceAll("[\\r\\n]+"," "); }
 
