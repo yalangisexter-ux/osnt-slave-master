@@ -213,6 +213,16 @@
             android:background="@drawable/bg_primary_button"
             android:textColor="#06101C" />
 
+        <Button
+            android:id="@+id/btn_upload_image"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="6dp"
+            android:text="Upload Image for Reverse Search"
+            android:textAllCaps="false"
+            android:background="@drawable/bg_action_button"
+            android:textColor="#DCE7FA" />
+
         <!-- ONE-TAP CONNECT ROW -->
         <TextView
             android:layout_width="match_parent"
