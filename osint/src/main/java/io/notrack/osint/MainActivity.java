@@ -42,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int VPN_CONFIG_REQUEST = 1001;
     private static final int FILE_PICK_REQUEST = 1002;
     private static final int IMAGE_PICK_REQUEST = 1003;
+    private static final int REPORT_EXPORT_REQUEST = 1005;
+    private String pendingEvidenceReport = "";
     private static final int PERMISSION_STORAGE = 2001;
     private static final String PREFS = "osint_prefs";
 
@@ -527,6 +529,28 @@ public class MainActivity extends AppCompatActivity {
 
     private String fieldText(EditText field) {
         return field == null || field.getText() == null ? "" : field.getText().toString().trim();
+    }
+
+    private void exportEvidenceReport() {
+        StringBuilder report = new StringBuilder();
+        report.append("CYBER ABUSE / IMPERSONATION EVIDENCE SUMMARY\n");
+        report.append("Generated: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).format(new Date())).append("\n");
+        report.append("Case/subject label: ").append(fieldText(inQuery)).append("\n");
+        report.append("Known username/organization: ").append(fieldText(inDomain)).append("\n");
+        report.append("Source/profile URL: ").append(fieldText(inUrl)).append("\n");
+        report.append("Emails supplied: ").append(fieldText(inEmails)).append("\n");
+        report.append("Phones supplied: ").append(fieldText(inPhones)).append("\n");
+        report.append("Known social accounts: ").append(fieldText(inSocialAccounts)).append("\n\n");
+        report.append("SOURCE REVIEW\nRecord exact source URL, collection time/timezone, page/account identifier, and verification steps. Search results are leads, not proof of identity.\n\n");
+        report.append("CHAIN OF CUSTODY\nCollector: ____________________\nCollection time/timezone: ____________________\nTransfer/access log: ____________________\nNotes: ____________________\n\n");
+        report.append("REPORTING\nIndia National Cyber Crime Reporting Portal: https://cybercrime.gov.in/\nStopNCII.org: https://stopncii.org/\n\n");
+        report.append("This summary is not a legal opinion or certificate of admissibility. Preserve original files and metadata and ask the investigating authority/legal counsel about applicable electronic-record requirements.\n");
+        pendingEvidenceReport = report.toString();
+        Intent create = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        create.addCategory(Intent.CATEGORY_OPENABLE);
+        create.setType("text/plain");
+        create.putExtra(Intent.EXTRA_TITLE, "cyber-evidence-summary-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".txt");
+        startActivityForResult(create, REPORT_EXPORT_REQUEST);
     }
 
     private void oneTapPublicSearch() {
