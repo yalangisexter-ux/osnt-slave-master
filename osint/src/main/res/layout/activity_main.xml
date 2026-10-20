@@ -309,6 +309,7 @@
                 android:textSize="11sp" />
 
             <Button android:id="@+id/btn_search2" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="⌕  Search all sources" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
+            <Button android:id="@+id/btn_export_report" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="Export evidence report" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
             <Button android:id="@+id/btn_dork" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="📝  Google dorks" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
             <Button android:id="@+id/btn_dorks" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🔍  Dork generator" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
             <Button android:id="@+id/btn_images" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="6dp" android:text="🖼  Reverse image search" android:textAllCaps="false" android:background="@drawable/bg_action_button" android:textColor="#DCE7FA" />
