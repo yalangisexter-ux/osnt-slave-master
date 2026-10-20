@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import UIKit
+import PhotosUI
 
 @main
 struct OSINTiOSApp: App {
@@ -26,6 +27,8 @@ struct ContentView: View {
     @State private var reportText = ""
     @State private var showShare = false
     @State private var isCheckingBreach = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var evidenceImage: UIImage?
 
     private let engines = ["Google", "Bing", "DuckDuckGo", "Brave"]
     private let tools = [
@@ -79,6 +82,15 @@ struct ContentView: View {
                 }
 
                 Section("Evidence and configuration") {
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        Label("Attach evidence image", systemImage: "photo.badge.plus")
+                    }
+                    if let evidenceImage {
+                        Image(uiImage: evidenceImage).resizable().scaledToFit().frame(maxHeight: 180)
+                        Button(role: .destructive) { self.evidenceImage = nil; selectedPhoto = nil } label: {
+                            Label("Remove evidence image", systemImage: "trash")
+                        }
+                    }
                     Button { prepareReport() } label: {
                         Label("Create / export investigation notes", systemImage: "doc.text")
                     }
@@ -140,7 +152,18 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showShare) {
-                ShareSheet(items: [reportText])
+                ShareSheet(items: evidenceImage.map { [reportText as Any, $0 as Any] } ?? [reportText as Any])
+            }
+            .onChange(of: selectedPhoto) { newItem in
+                guard let newItem else { return }
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                        evidenceImage = image
+                        status = "Evidence image attached; export notes to share it."
+                    } else {
+                        status = "Could not load the selected image."
+                    }
+                }
             }
         }
     }
