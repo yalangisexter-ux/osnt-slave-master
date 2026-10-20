@@ -575,16 +575,6 @@ public class MainActivity extends AppCompatActivity {
         links.add(new String[]{label, url});
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK && data != null && data.getData() != null && requestCode == IMAGE_PICK_REQUEST) {
-            selectedEvidenceImage = data.getData();
-            try { getContentResolver().takePersistableUriPermission(selectedEvidenceImage, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
-            catch (Exception ignored) {}
-            status.setText("Image selected. Tap Search All to prepare public-source searches.");
-        }
-    }
 
     private void doSearch() {
         String q = buildQuery();
@@ -1611,41 +1601,20 @@ public class MainActivity extends AppCompatActivity {
     private void showAbout() {
         new AlertDialog.Builder(this)
                 .setTitle("OSINT Workspace v2.0")
-                .setMessage("All-in-one OSINT tool
-
-" +
-                        "Features:
-" +
-                        "â€¢ Multi-engine search (Google, Bing, DDG, etc.)
-" +
-                        "â€¢ Tor dark web browsing
-" +
-                        "â€¢ VPN management (WireGuard)
-" +
-                        "â€¢ Reverse image & face search
-" +
-                        "â€¢ Leaks search (social, cloud, email, etc.)
-" +
-                        "â€¢ Porn/cams/escort search
-" +
-                        "â€¢ Google dork generator
-" +
-                        "â€¢ HPB & Leaks.io API integration
-" +
-                        "â€¢ Brute force & password tools
-" +
-                        "â€¢ OTP bypass for social platforms
-" +
-                        "â€¢ Live streaming & video player
-" +
-                        "â€¢ File/photo/doc browser
-
-" +
-                        "Built with â¤ï¸ for OSINT investigations")
+                .setMessage("All-in-one OSINT tool\n\n"
+                        + "Features:\n"
+                        + "• Multi-engine search (Google, Bing, DDG, etc.)\n"
+                        + "• Tor dark web browsing\n"
+                        + "• VPN management (WireGuard)\n"
+                        + "• Reverse image search\n"
+                        + "• Public social-profile search\n"
+                        + "• Google dork generator\n"
+                        + "• HPB & Leaks.io API integration\n"
+                        + "• File/photo/doc browser\n\n"
+                        + "Use only for authorized investigations. Public search results are leads, not proof.")
                 .setPositiveButton("OK", null)
                 .show();
     }
-
     // ==================== HELPERS ====================
     private void loadSavedApiKeys() {
         hpbApiKey = getSharedPreferences(PREFS, MODE_PRIVATE).getString("hpb_key", "");
@@ -1723,6 +1692,13 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
 
         Uri uri = data.getData();
+        if (requestCode == IMAGE_PICK_REQUEST) {
+            selectedEvidenceImage = uri;
+            try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
+            catch (Exception ignored) {}
+            status.setText("Image selected. Tap Search All to prepare public-source searches.");
+            return;
+        }
         if (requestCode == VPN_CONFIG_REQUEST) {
             try {
                 String config;
