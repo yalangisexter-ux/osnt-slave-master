@@ -528,53 +528,111 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void oneTapPublicSearch() {
-        String name = fieldText(inQuery), username = fieldText(inDomain), profileUrl = fieldText(inUrl);
-        String emails = fieldText(inEmails), phones = fieldText(inPhones), accounts = fieldText(inSocialAccounts);
-        if (name.isEmpty() && username.isEmpty() && profileUrl.isEmpty() && emails.isEmpty() && phones.isEmpty() && accounts.isEmpty() && selectedEvidenceImage == null) {
+        String name = fieldText(inQuery);
+        String username = fieldText(inDomain);
+        String profileUrl = fieldText(inUrl);
+        String emails = fieldText(inEmails);
+        String phones = fieldText(inPhones);
+        String accounts = fieldText(inSocialAccounts);
+        if (name.isEmpty() && username.isEmpty() && profileUrl.isEmpty()
+                && emails.isEmpty() && phones.isEmpty() && accounts.isEmpty()
+                && selectedEvidenceImage == null) {
             Toast.makeText(this, "Enter at least one identifier or select an image", Toast.LENGTH_LONG).show();
             return;
         }
+
         ArrayList<String[]> links = new ArrayList<>();
-        addSearchLink(links, "Google — general public web", joinIdentifiers(name, username, profileUrl, accounts));
-        addSearchLink(links, "Bing — general public web", joinIdentifiers(name, username, profileUrl, accounts));
-        addSearchLink(links, "DuckDuckGo — general public web", joinIdentifiers(name, username, profileUrl, accounts));
-        addSearchLink(links, "Public social profiles", joinIdentifiers(name, username, accounts) + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:youtube.com OR site:reddit.com)");
-        addSearchLink(links, "LinkedIn public results", joinIdentifiers(name, username, accounts) + " site:linkedin.com");
-        addSearchLink(links, "GitHub public results", joinIdentifiers(name, username, accounts) + " site:github.com");
-        addSearchLink(links, "Public pages mentioning supplied email", emails);
-        addSearchLink(links, "Public pages mentioning supplied phone", phones);
-        addSearchLink(links, "Google Images", joinIdentifiers(name, username, accounts));
-        addSearchLink(links, "Bing Images", joinIdentifiers(name, username, accounts));
-        addSearchLink(links, "Google dorks — public indexed pages", joinIdentifiers(name, username, accounts) + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:github.com)");
-        StringBuilder html = new StringBuilder("<!doctype html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'><meta charset='utf-8'><style>body{font-family:Arial;background:#0b1020;color:#eef4ff;padding:16px}h2{color:#8be9fd}.card{background:#17233b;border-radius:12px;padding:14px;margin:10px 0}a{color:#8be9fd;font-weight:600;text-decoration:none}small{color:#aebbd2}</style></head><body><h2>Public-footprint investigation</h2><p><small>Search links open public search providers. Results are leads, not proof of identity. Verify independently and follow agency authorization and evidence-handling rules.</small></p>");
-        for (String[] item : links) html.append("<div class='card'><a href='").append(escapeHtml(item[1])).append("'>").append(escapeHtml(item[0])).append("</a></div>");
-        if (selectedEvidenceImage != null) html.append("<div class='card'><b>Image selected</b><p><small>The app does not upload images to third-party face-identification services. Upload only through a provider when authorized.</small></p><a href='https://lens.google.com/'>Open Google Lens</a><br><br><a href='https://www.bing.com/visualsearch'>Open Bing Visual Search</a></div>");
-        html.append("<div class='card'><a href='https://haveibeenpwned.com/'>Have I Been Pwned — check only an email you own or are authorized to investigate</a></div></body></html>");
+        String identity = joinIdentifiers(name, username, profileUrl, accounts);
+        addSearchLink(links, "Google web search", identity);
+        addSearchLink(links, "Bing web search", identity, "bing");
+        addSearchLink(links, "DuckDuckGo web search", identity, "ddg");
+        addSearchLink(links, "Brave Search", identity, "brave");
+        addSearchLink(links, "Public social profiles", identity
+                + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:youtube.com OR site:reddit.com)");
+        addSearchLink(links, "LinkedIn public results", identity + " site:linkedin.com");
+        addSearchLink(links, "Facebook public results", identity + " site:facebook.com");
+        addSearchLink(links, "Instagram public results", identity + " site:instagram.com");
+        addSearchLink(links, "X public results", identity + " (site:x.com OR site:twitter.com)");
+        addSearchLink(links, "TikTok public results", identity + " site:tiktok.com");
+        addSearchLink(links, "Reddit public results", identity + " site:reddit.com");
+        addSearchLink(links, "GitHub public results", identity + " site:github.com");
+        addSearchLink(links, "Google Images", identity, "google-images");
+        addSearchLink(links, "Bing Visual Search", identity, "bing-images");
+
+        addIdentifierSearches(links, emails, "email");
+        addIdentifierSearches(links, phones, "phone");
+        addIdentifierSearches(links, accounts, "username");
+
+        StringBuilder html = new StringBuilder("<!doctype html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'><meta charset='utf-8'><style>")
+                .append("body{font-family:Arial;background:#0b1020;color:#eef4ff;padding:16px}h2{color:#8be9fd}")
+                .append(".card{background:#17233b;border-radius:12px;padding:14px;margin:10px 0}")
+                .append("a{color:#8be9fd;font-weight:600;text-decoration:none}small{color:#aebbd2}</style></head><body>")
+                .append("<h2>Investigation search workspace</h2>")
+                .append("<p><small>One tap prepared ").append(links.size()).append(" source-specific searches. Select a source to view its live results. This app does not scrape behind logins, bypass access controls, or claim a source was searched until opened. Verify identity matches independently.</small></p>");
+        for (String[] item : links) {
+            html.append("<div class='card'><a href='").append(escapeHtml(item[1])).append("'>")
+                    .append(escapeHtml(item[0])).append("</a></div>");
+        }
+        if (selectedEvidenceImage != null) {
+            html.append("<div class='card'><b>Image selected</b><p><small>Image search providers require their own upload flow; the app does not silently transmit evidence images.</small></p>")
+                    .append("<a href='https://lens.google.com/'>Open Google Lens upload</a><br><br>")
+                    .append("<a href='https://www.bing.com/visualsearch'>Open Bing Visual Search upload</a></div>");
+        }
+        if (!emails.isEmpty()) {
+            html.append("<div class='card'><a href='https://haveibeenpwned.com/'>Have I Been Pwned — check a supplied email with authorization</a><p><small>This opens the provider; this app does not query private breach data.</small></p></div>");
+        }
+        html.append("<div class='card'><b>Transport status</b><p><small>Tor and VPN are separate network transports and cannot safely be assumed active from a search click. Use the Tor/VPN controls and verify their connection status before sensitive work.</small></p>")
+                .append("<a href='https://check.torproject.org/'>Verify Tor in browser</a></div>")
+                .append("</body></html>");
         web.setVisibility(View.VISIBLE);
         web.loadDataWithBaseURL("https://www.google.com/", html.toString(), "text/html", "UTF-8", null);
-        status.setText("Prepared " + links.size() + " public-source searches. Tap a source to open its results.");
+        status.setText("Prepared " + links.size() + " public-source searches. Source requests are opened individually.");
+    }
+
+    private void addIdentifierSearches(ArrayList<String[]> links, String rawValues, String kind) {
+        if (rawValues == null || rawValues.trim().isEmpty()) return;
+        String[] values = rawValues.split("[,;\\n\\r]+");
+        for (String raw : values) {
+            String value = raw.trim();
+            if (value.isEmpty()) continue;
+            String q = "\"" + value + "\"";
+            String prefix = kind.equals("email") ? "Email: " : kind.equals("phone") ? "Phone: " : "Username: ";
+            addSearchLink(links, prefix + value + " — Google", q);
+            addSearchLink(links, prefix + value + " — Bing", q, "bing");
+            addSearchLink(links, prefix + value + " — public social results",
+                    q + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:reddit.com)");
+        }
     }
 
     private String joinIdentifiers(String... values) {
         StringBuilder result = new StringBuilder();
-        for (String value : values) if (value != null && !value.trim().isEmpty()) {
-            if (result.length() > 0) result.append(' ');
-            result.append('"').append(value.trim()).append('"');
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                if (result.length() > 0) result.append(' ');
+                result.append('"').append(value.trim()).append('"');
+            }
         }
         return result.toString().trim();
     }
 
     private void addSearchLink(ArrayList<String[]> links, String label, String query) {
-        if (query == null || query.trim().isEmpty()) return;
-        String q = query.trim(), url;
-        if (label.startsWith("Bing —")) url = "https://www.bing.com/search?q=" + urlEncode(q);
-        else if (label.startsWith("DuckDuckGo")) url = "https://duckduckgo.com/?q=" + urlEncode(q);
-        else if (label.equals("Google Images")) url = "https://www.google.com/search?tbm=isch&q=" + urlEncode(q);
-        else if (label.equals("Bing Images")) url = "https://www.bing.com/images/search?q=" + urlEncode(q);
-        else url = "https://www.google.com/search?q=" + urlEncode(q);
-        links.add(new String[]{label, url});
+        addSearchLink(links, label, query, "google");
     }
 
+    private void addSearchLink(ArrayList<String[]> links, String label, String query, String provider) {
+        if (query == null || query.trim().isEmpty()) return;
+        String q = query.trim();
+        String url;
+        switch (provider) {
+            case "bing": url = "https://www.bing.com/search?q=" + urlEncode(q); break;
+            case "ddg": url = "https://duckduckgo.com/?q=" + urlEncode(q); break;
+            case "brave": url = "https://search.brave.com/search?q=" + urlEncode(q); break;
+            case "google-images": url = "https://www.google.com/search?tbm=isch&q=" + urlEncode(q); break;
+            case "bing-images": url = "https://www.bing.com/images/search?q=" + urlEncode(q); break;
+            default: url = "https://www.google.com/search?q=" + urlEncode(q);
+        }
+        links.add(new String[]{label, url});
+    }
 
     private void doSearch() {
         String q = buildQuery();
