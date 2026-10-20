@@ -233,6 +233,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_playprotect).setOnClickListener(v -> { bypassPlayProtect(); closeDrawer(); });
         // One-tap connect row (main screen)
         findViewById(R.id.btn_search2).setOnClickListener(v -> { oneTapPublicSearch(); closeDrawer(); });
+        findViewById(R.id.btn_export_report).setOnClickListener(v -> { exportEvidenceReport(); closeDrawer(); });
         findViewById(R.id.btn_password).setOnClickListener(v -> { showPasswordCracker(); closeDrawer(); });
         findViewById(R.id.btn_hpb).setOnClickListener(v -> { showHpbPanel(); closeDrawer(); });
         findViewById(R.id.btn_leaksio).setOnClickListener(v -> { leaksIoCheck(); closeDrawer(); });
@@ -1785,6 +1786,16 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
 
         Uri uri = data.getData();
+        if (requestCode == REPORT_EXPORT_REQUEST) {
+            try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                if (out == null) throw new IOException("Unable to create report file");
+                out.write(pendingEvidenceReport.getBytes(StandardCharsets.UTF_8));
+                status.setText("Evidence summary exported. Preserve original files separately.");
+            } catch (Exception e) {
+                status.setText("Report export failed: " + e.getMessage());
+            }
+            return;
+        }
         if (requestCode == IMAGE_PICK_REQUEST) {
             selectedEvidenceImage = uri;
             try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
