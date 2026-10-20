@@ -1,6 +1,7 @@
 name: OSINTiOS
 options:
   bundleIdPrefix: io.notrack
+  xcodeVersion: "15.0"
   deploymentTarget:
     iOS: "16.0"
 settings:
