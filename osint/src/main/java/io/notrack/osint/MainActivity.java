@@ -617,7 +617,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void addLiveIdentifierJobs(ArrayList<String[]> jobs,String values,String type) {
         if(values==null||values.trim().isEmpty()) return;
-        for(String value:values.split("[,;\\n\\r]+")) { String clean=value.trim(); if(!clean.isEmpty()) jobs.add(new String[]{type+" lookup","\\""+clean+"\\""}); }
+        for (String value : values.split("[,;\\n\\r]+")) { String clean = value.trim(); if (!clean.isEmpty()) jobs.add(new String[]{type + " lookup", "\"" + clean + "\""}); }
     }
 
     private ArrayList<String[]> fetchDuckDuckGoResults(String query,String category) throws IOException {
