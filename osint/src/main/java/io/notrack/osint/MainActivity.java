@@ -583,13 +583,28 @@ public class MainActivity extends AppCompatActivity {
             jobs.add(new String[]{"General web", identity});
             jobs.add(new String[]{"Social profiles", identity + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:reddit.com OR site:youtube.com)"});
             jobs.add(new String[]{"Impersonation / fake profile", identity + " (impersonation OR \"fake profile\" OR catfish OR scam)"});
-            jobs.add(new String[]{"Romance / payment scam reports", identity + " (romance scam OR dating scam OR payment demand OR fraud)"});
-            jobs.add(new String[]{"Extortion / blackmail reports", identity + " (extortion OR blackmail OR sextortion)"});
-            jobs.add(new String[]{"Public exposure / breach mentions", identity + " (data breach OR exposed OR compromised OR \"data leak\")"});
-            jobs.add(new String[]{"Public documents", identity + " (filetype:pdf OR filetype:doc OR filetype:docx)"});
+            jobs.add(new String[]{"Romance / dating scam reports", identity + " (romance scam OR dating scam OR fake dating profile OR catfish OR marriage fraud)"});
+            jobs.add(new String[]{"Video-call scam / sextortion reports", identity + " (\"video call scam\" OR sextortion OR \"video call blackmail\" OR \"intimate image abuse\")"});
+            jobs.add(new String[]{"Impersonation / honey-trap indicators", identity + " (\"honey trap\" OR impersonation OR \"fake profile\" OR \"social engineering\")"});
+            jobs.add(new String[]{"Payment / UPI / crypto fraud reports", identity + " (UPI fraud OR payment scam OR extortion payment OR cryptocurrency scam OR fraud report)"});
+            jobs.add(new String[]{"Public cybercrime advisories", identity + " (site:cybercrime.gov.in OR site:police.gov.in cyber fraud)"});
+            jobs.add(new String[]{"Public exposure / breach notices", identity + " (\"data breach\" OR \"security incident\" OR exposed OR compromised OR \"data leak report\")"});
+            jobs.add(new String[]{"Public document mentions", identity + " (filetype:pdf OR filetype:doc OR filetype:docx)"});
+            jobs.add(new String[]{"Domain / website reputation", identity + " (phishing OR malware OR scam website OR domain reputation)"});
+            jobs.add(new String[]{"Victim-support / reporting resources", identity + " (report scam OR victim support OR cybercrime complaint OR blackmail help)"});
         }
         addLiveIdentifierJobs(jobs, emails, "Email"); addLiveIdentifierJobs(jobs, phones, "Phone"); addLiveIdentifierJobs(jobs, accounts, "Username");
-        if (!profileUrl.isEmpty()) jobs.add(new String[]{"URL mentions", "\"" + profileUrl + "\"" });
+        if (!profileUrl.isEmpty()) {
+            jobs.add(new String[]{"URL mentions", "\"" + profileUrl + "\"" });
+            try {
+                URI parsed = new URI(profileUrl.contains("://") ? profileUrl : "https://" + profileUrl);
+                String host = parsed.getHost();
+                if (host != null && !host.isEmpty()) {
+                    jobs.add(new String[]{"Domain reputation", "site:" + host + " (scam OR phishing OR fraud OR impersonation)"});
+                    jobs.add(new String[]{"Public domain exposure notices", "\"" + host + "\" (security incident OR breach OR exposed)"});
+                }
+            } catch (Exception ignored) { /* Invalid host is not treated as evidence. */ }
+        }
         final int total = jobs.size();
         progressBar.setVisibility(View.VISIBLE); progressBar.setIndeterminate(false); progressBar.setMax(Math.max(1,total)); progressBar.setProgress(0);
         web.setVisibility(View.VISIBLE); web.setVerticalScrollBarEnabled(true); web.setHorizontalScrollBarEnabled(false);
@@ -663,6 +678,8 @@ public class MainActivity extends AppCompatActivity {
         for(String[] f:failures) o.append("<div class='card warn'><b>").append(escapeHtml(f[0])).append("</b><p>").append(escapeHtml(f[1])).append("</p></div>");
         o.append("<h3>Not searched automatically</h3><div class='card'>Reverse-image engines require image submission. Social platforms, breach services and .onion sites can require APIs, authentication or a verified Tor connection; they are not claimed as searched. No private/leaked datasets are downloaded.</div>");
         o.append("<h3>Case details</h3><div class='card'>Case: ").append(escapeHtml(name)).append("<br>Username: ").append(escapeHtml(username)).append("<br>URL: ").append(escapeHtml(profileUrl)).append("<br>Email: ").append(escapeHtml(emails)).append("<br>Phone: ").append(escapeHtml(phones)).append("<br>Accounts: ").append(escapeHtml(accounts)).append("</div>");
+        o.append("<h3>Evidence preservation</h3><div class='card'>Preserve original messages and media using the platform's lawful export/reporting features. Capture the complete conversation context, sender/account identifier, visible timestamp and source URL. Keep original files unedited and restrict access; record collector, collection time and transfers. A SHA-256 hash can help show a file has not changed after collection. Do not redistribute intimate imagery.</div>");
+        o.append("<h3>Scope and limitations</h3><div class='card'>Search categories include romance/dating fraud, video-call extortion, impersonation, UPI/payment fraud, public cybercrime advisories, domain reputation and public security-incident notices. DuckDuckGo is the only provider fetched automatically in this build. Other sites, private accounts, breach datasets and .onion services are not claimed as searched. Results are leads, not proof.</div>");
         o.append("<h3>Reporting</h3><div class='card'><a href='https://cybercrime.gov.in/'>India Cyber Crime Portal</a><br><a href='https://stopncii.org/'>StopNCII</a><br><a href='https://haveibeenpwned.com/'>Have I Been Pwned</a></div></body></html>");
         return o.toString();
     }
