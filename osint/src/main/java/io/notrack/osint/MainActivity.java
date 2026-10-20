@@ -194,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDrawer() {
-        findViewById(R.id.btn_search).setOnClickListener(v -> { oneTapPublicSearch(); closeDrawer(); });
+        findViewById(R.id.btn_search).setOnClickListener(v -> { oneTapPublicSearch(); closeDrawer(); });\n        findViewById(R.id.btn_upload_image).setOnClickListener(v -> pickEvidenceImage());
         findViewById(R.id.btn_dork).setOnClickListener(v -> { showDorkSelector(); closeDrawer(); });
         findViewById(R.id.btn_web).setOnClickListener(v -> { browse("https://www.google.com"); closeDrawer(); });
         findViewById(R.id.btn_dark).setOnClickListener(v -> { openDarkWeb(); closeDrawer(); });
