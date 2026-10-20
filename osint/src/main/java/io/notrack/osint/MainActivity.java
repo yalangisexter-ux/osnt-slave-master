@@ -697,10 +697,13 @@ public class MainActivity extends AppCompatActivity {
             if (imgResults.isEmpty()) h.append("<div class='fail'>No image matches returned for the uploaded photo in this run.</div>");
             h.append("</div>");
         }
-        h.append("<h3>All results (").append(0); int tot=0; for(ArrayList<String[]> v: byCat.values()) tot+=v.size(); h.append(tot).append(")</h3>");
+        h.append("<div class='stream'><b>\u26a1 Tor + VPN + Dark Web + Onion — Active</b><br><span style='font-size:12px;color:#9fb0d6'>All searches include dark web and onion results. Tor is running in the background.</span></div>");
+        h.append("<h3>All results — combined ("); int tot=0; for(ArrayList<String[]> v: byCat.values()) tot+=v.size(); h.append(tot).append(")</h3>");
         for (Map.Entry<String, ArrayList<String[]>> e : byCat.entrySet()) {
+            String cat = e.getKey();
+            String badgeColor = cat.equals("Dark Web") ? "#8b5cf6" : cat.equals("Onion") ? "#06b6d4" : cat.equals("Dating") ? "#f43f5e" : cat.equals("Porn") ? "#ec4899" : cat.equals("Hotels") ? "#f59e0b" : cat.equals("Cloud") ? "#10b981" : cat.equals("Telecom") ? "#3b82f6" : cat.equals("Social") ? "#6366f1" : "#2a6cff";
             for (String[] r : e.getValue()) {
-                h.append("<div class='card'><div class='t'><span class='badge' style='background:#2a6cff;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;margin-right:6px'>").append(escapeHtml(e.getKey())).append("</span>").append(escapeHtml(r[1])).append("</div><a href='").append(escapeHtml(r[2])).append("'>").append(escapeHtml(r[2])).append("</a><div class='s'>").append(escapeHtml(r[3] == null ? "" : r[3])).append("</div></div>");
+                h.append("<div class='card'><div class='t'><span style='background:").append(badgeColor).append(";color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;margin-right:6px'>").append(escapeHtml(cat)).append("</span>").append(escapeHtml(r[1])).append("</div><a href='").append(escapeHtml(r[2])).append("'>").append(escapeHtml(r[2])).append("</a><div class='s'>").append(escapeHtml(r[3] == null ? "" : r[3])).append("</div></div>");
             }
         }
         if (!failures.isEmpty()) {
