@@ -790,6 +790,7 @@ public class MainActivity extends AppCompatActivity {
         return imgs;
     }
     private String decodeHtmlEntities(String value) { return value.replace("&amp;","&").replace("&quot;","\\\"").replace("&#x27;","'").replace("&#39;","'").replace("&lt;","<").replace("&gt;",">").replace("&nbsp;"," "); }
+    private String stripHtml(String value) { return value == null ? "" : value.replaceAll("(?s)<[^>]*>", " ").replaceAll("\\s+", " ").trim(); }
     private String safeMessage(String value) { return value==null||value.trim().isEmpty()?"request failed":value.replaceAll("[\\r\\n]+"," "); }
 
     private void addIdentifierSearches(ArrayList<String[]> links, String rawValues, String kind) {
