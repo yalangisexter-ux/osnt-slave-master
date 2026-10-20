@@ -555,74 +555,92 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void oneTapPublicSearch() {
-        String name = fieldText(inQuery);
-        String username = fieldText(inDomain);
-        String profileUrl = fieldText(inUrl);
-        String emails = fieldText(inEmails);
-        String phones = fieldText(inPhones);
-        String accounts = fieldText(inSocialAccounts);
+        final String name = fieldText(inQuery);
+        final String username = fieldText(inDomain);
+        final String profileUrl = fieldText(inUrl);
+        final String emails = fieldText(inEmails);
+        final String phones = fieldText(inPhones);
+        final String accounts = fieldText(inSocialAccounts);
         if (name.isEmpty() && username.isEmpty() && profileUrl.isEmpty()
                 && emails.isEmpty() && phones.isEmpty() && accounts.isEmpty()
                 && selectedEvidenceImage == null) {
-            Toast.makeText(this, "Enter at least one identifier or select an image", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Enter at least one identifier or select evidence", Toast.LENGTH_LONG).show();
             return;
         }
 
-        ArrayList<String[]> links = new ArrayList<>();
-        String identity = joinIdentifiers(name, username, profileUrl, accounts);
-        addSearchLink(links, "Google web search", identity);
-        addSearchLink(links, "Bing web search", identity, "bing");
-        addSearchLink(links, "DuckDuckGo web search", identity, "ddg");
-        addSearchLink(links, "Brave Search", identity, "brave");
-        addSearchLink(links, "Public social profiles", identity
-                + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:youtube.com OR site:reddit.com)");
+        final String identity = joinIdentifiers(name, username, profileUrl, accounts);
+        final ArrayList<String[]> links = new ArrayList<>();
+        addSearchLink(links, "General public web — Google", identity);
+        addSearchLink(links, "General public web — Bing", identity, "bing");
+        addSearchLink(links, "General public web — DuckDuckGo", identity, "ddg");
+        addSearchLink(links, "General public web — Brave", identity, "brave");
+        addSearchLink(links, "Public social profile results", identity + " (site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com OR site:youtube.com OR site:reddit.com OR site:github.com)");
         addSearchLink(links, "LinkedIn public results", identity + " site:linkedin.com");
         addSearchLink(links, "Facebook public results", identity + " site:facebook.com");
         addSearchLink(links, "Instagram public results", identity + " site:instagram.com");
-        addSearchLink(links, "X public results", identity + " (site:x.com OR site:twitter.com)");
+        addSearchLink(links, "X / Twitter public results", identity + " (site:x.com OR site:twitter.com)");
         addSearchLink(links, "TikTok public results", identity + " site:tiktok.com");
         addSearchLink(links, "Reddit public results", identity + " site:reddit.com");
         addSearchLink(links, "GitHub public results", identity + " site:github.com");
-        addSearchLink(links, "Google Images", identity, "google-images");
-        addSearchLink(links, "Bing Visual Search", identity, "bing-images");
+        addSearchLink(links, "Public image results", identity, "google-images");
+        addSearchLink(links, "Public video results", identity + " (video OR upload OR repost)");
+        addSearchLink(links, "Impersonation / fake-profile mentions", identity + " (impersonation OR \"fake profile\" OR scam)");
+        addSearchLink(links, "Romance / dating scam indicators", identity + " (romance scam OR dating scam OR catfish OR impersonation)");
+        addSearchLink(links, "Extortion / sextortion / blackmail reports", identity + " (extortion OR sextortion OR blackmail OR \"money demand\")");
+        addSearchLink(links, "Non-consensual image abuse resources", "\"non-consensual intimate image\" OR \"image-based abuse\" OR sextortion");
+        addSearchLink(links, "Public repost / stolen-content mentions", identity + " (\"stolen photo\" OR \"fake account\" OR repost)");
+        addSearchLink(links, "Public breach / exposure mentions", identity + " (breach OR exposed OR \"data leak\" OR compromised)");
+        addSearchLink(links, "Public adult-site results (not identity verification)", identity + " site:pornhub.com OR site:xvideos.com OR site:xnxx.com");
+        addSearchLink(links, "Public escort-ad scam indicators", identity + " (\"escort scam\" OR blackmail OR extortion)");
+        addSearchLink(links, "Public documents / PDFs", identity + " (filetype:pdf OR filetype:doc OR filetype:docx)");
+        addSearchLink(links, "Public code / technical mentions", identity + " site:github.com");
+        addSearchLink(links, "Have I Been Pwned — provider check", "https://haveibeenpwned.com/");
 
         addIdentifierSearches(links, emails, "email");
         addIdentifierSearches(links, phones, "phone");
         addIdentifierSearches(links, accounts, "username");
 
-        // Public-source leads for suspected impersonation, extortion and content reposting.
-        if (!identity.isEmpty()) {
-            addSearchLink(links, "Impersonation / fake-profile mentions", identity + " impersonation OR \"fake profile\" OR scam");
-            addSearchLink(links, "Extortion / sextortion mentions", identity + " extortion OR sextortion OR blackmail");
-            addSearchLink(links, "Possible stolen photo/video reposts", identity + " \"stolen photos\" OR \"fake account\" OR \"reposted video\"");
-            addSearchLink(links, "Dating / escort-ad scam indicators", identity + " \"dating scam\" OR \"escort scam\" OR blackmail");
-            addSearchLink(links, "Public exposure / breach mentions", identity + " exposed OR breach OR \"data leak\"");
-        }
-
+        boolean vpnActive = isVpnActive();
+        String transport = "VPN: " + (vpnActive ? "Android reports a VPN transport active" : "not detected")
+                + " · Tor: " + (torActive ? "local Tor SOCKS handshake previously succeeded" : "not verified/ inactive");
         StringBuilder html = new StringBuilder("<!doctype html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'><meta charset='utf-8'><style>")
-                .append("body{font-family:Arial;background:#0b1020;color:#eef4ff;padding:16px}h2{color:#8be9fd}")
-                .append(".card{background:#17233b;border-radius:12px;padding:14px;margin:10px 0}")
-                .append("a{color:#8be9fd;font-weight:600;text-decoration:none}small{color:#aebbd2}</style></head><body>")
-                .append("<h2>Investigation search workspace</h2>")
-                .append("<p><small>One tap prepared ").append(links.size()).append(" source-specific searches. Select a source to view its live results. This app does not scrape behind logins, bypass access controls, or claim a source was searched until opened. Verify identity matches independently.</small></p>");
+                .append("body{font-family:Arial;background:#0b1020;color:#eef4ff;padding:14px}h2{color:#8be9fd}h3{color:#c5f6ff;margin-bottom:8px}")
+                .append(".card{background:#17233b;border-radius:12px;padding:13px;margin:9px 0}.tag{font-size:12px;color:#ffdf91}")
+                .append("a{color:#8be9fd;font-weight:600;text-decoration:none}small{color:#aebbd2}.muted{color:#b9c5d9}</style></head><body>")
+                .append("<h2>One-tap investigation workspace</h2>")
+                .append("<p class='muted'>Prepared ").append(links.size()).append(" source-specific searches in one combined page. Links are grouped leads; external sites are not silently scraped and results are not asserted until each provider is opened. Review each match manually.</p>")
+                .append("<div class='card'><b>Connection status</b><p class='muted'>").append(escapeHtml(transport)).append("</p>")
+                .append("<p class='muted'>VPN/Tor change network routing only when actually connected and correctly configured. This page cannot turn VPN/Tor on automatically or prove every request uses them. .onion sources require a working Tor route.</p>")
+                .append("<a href='https://check.torproject.org/'>Verify Tor routing</a> · <a href='https://www.wireguard.com/'>WireGuard information</a></div>")
+                .append("<h3>Public web, profiles and media</h3>");
+        int count = 0;
         for (String[] item : links) {
-            html.append("<div class='card'><a href='").append(escapeHtml(item[1])).append("'>")
-                    .append(escapeHtml(item[0])).append("</a></div>");
+            if (item[0].startsWith("Email:") || item[0].startsWith("Phone:") || item[0].startsWith("Username:")) continue;
+            html.append("<div class='card'><a href='").append(escapeHtml(item[1])).append("'>").append(escapeHtml(item[0])).append("</a><p class='muted'>Open provider results for this query.</p></div>");
+            count++;
+            if (count == 4) html.append("<h3>Impersonation, abuse and exposure leads</h3>");
+            if (count == 15) html.append("<h3>Specialized public-source leads</h3>");
+        }
+        html.append("<h3>Email, phone and username lookups</h3>");
+        for (String[] item : links) {
+            if (item[0].startsWith("Email:") || item[0].startsWith("Phone:") || item[0].startsWith("Username:")) {
+                html.append("<div class='card'><a href='").append(escapeHtml(item[1])).append("'>").append(escapeHtml(item[0])).append("</a></div>");
+            }
         }
         if (selectedEvidenceImage != null) {
-            html.append("<div class='card'><b>Image selected</b><p><small>Image search providers require their own upload flow; the app does not silently transmit evidence images.</small></p>")
-                    .append("<a href='https://lens.google.com/'>Open Google Lens upload</a><br><br>")
-                    .append("<a href='https://www.bing.com/visualsearch'>Open Bing Visual Search upload</a></div>");
+            html.append("<div class='card'><b>Evidence image selected</b><p class='muted'>The image is not uploaded automatically. Review the provider's privacy terms before choosing to submit it.</p>")
+                .append("<a href='https://lens.google.com/'>Google Lens</a> · <a href='https://www.bing.com/visualsearch'>Bing Visual Search</a></div>");
         }
-        if (!emails.isEmpty()) {
-            html.append("<div class='card'><a href='https://haveibeenpwned.com/'>Have I Been Pwned — check a supplied email with authorization</a><p><small>This opens the provider; this app does not query private breach data.</small></p></div>");
-        }
-        html.append("<div class='card'><b>Transport status</b><p><small>Tor and VPN are separate network transports and cannot safely be assumed active from a search click. Use the Tor/VPN controls and verify their connection status before sensitive work.</small></p>")
-                .append("<a href='https://check.torproject.org/'>Verify Tor in browser</a></div>")
-                .append("</body></html>");
+        html.append("<h3>Dark web / Tor</h3><div class='card'><p class='muted'>No general-purpose dark-web search API is configured. The app cannot honestly return all .onion content in this page. Use Tor only when its connection is verified, then manually open a vetted, known .onion address.</p>")
+            .append("<a href='https://www.torproject.org/'>Tor Project</a> · <a href='https://check.torproject.org/'>Check Tor connection</a></div>");
+        html.append("<h3>Safety and reporting resources</h3><div class='card'><a href='https://cybercrime.gov.in/'>India National Cyber Crime Reporting Portal</a><br><br>")
+            .append("<a href='https://stopncii.org/'>StopNCII.org — eligible intimate-image abuse support</a><br><br>")
+            .append("<a href='https://support.google.com/websearch/answer/6302812'>Google content removal guidance</a><br><br>")
+            .append("<a href='https://haveibeenpwned.com/'>Have I Been Pwned</a></div>")
+            .append("<p class='muted'>Important: public search results do not establish that a person owns an account or engaged in adult activity. Do not use search snippets as proof; preserve original URLs, timestamps and context.</p></body></html>");
         web.setVisibility(View.VISIBLE);
         web.loadDataWithBaseURL("https://www.google.com/", html.toString(), "text/html", "UTF-8", null);
-        status.setText("Prepared " + links.size() + " public-source searches. Source requests are opened individually.");
+        status.setText("One-tap page prepared: " + links.size() + " public-source links. Provider results open individually; Tor/VPN status is shown separately.");
     }
 
     private void addIdentifierSearches(ArrayList<String[]> links, String rawValues, String kind) {
