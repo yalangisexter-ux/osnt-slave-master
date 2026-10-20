@@ -48,7 +48,8 @@ public class MainActivity extends AppCompatActivity {
     // ==================== UI COMPONENTS ====================
     private DrawerLayout drawer;
     private WebView web;
-    private EditText inQuery, inDomain, inUrl, inFilePath, inEmails, inPhones, inSocialAccounts;\n    private Uri selectedEvidenceImage;
+    private EditText inQuery, inDomain, inUrl, inFilePath, inEmails, inPhones, inSocialAccounts;
+    private Uri selectedEvidenceImage;
     private TextView status;
     private Spinner engine, mode;
     private ProgressBar progressBar;
@@ -123,7 +124,10 @@ public class MainActivity extends AppCompatActivity {
         inQuery = findViewById(R.id.in_query);
         inDomain = findViewById(R.id.in_domain);
         inUrl = findViewById(R.id.in_url);
-        inFilePath = findViewById(R.id.in_file_path);\n        inEmails = findViewById(R.id.in_emails);\n        inPhones = findViewById(R.id.in_phones);\n        inSocialAccounts = findViewById(R.id.in_social_accounts);
+        inFilePath = findViewById(R.id.in_file_path);
+        inEmails = findViewById(R.id.in_emails);
+        inPhones = findViewById(R.id.in_phones);
+        inSocialAccounts = findViewById(R.id.in_social_accounts);
         status = findViewById(R.id.txt_status);
         engine = findViewById(R.id.spin_engine);
         mode = findViewById(R.id.spin_mode);
@@ -194,7 +198,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDrawer() {
-        findViewById(R.id.btn_search).setOnClickListener(v -> { oneTapPublicSearch(); closeDrawer(); });\n        findViewById(R.id.btn_upload_image).setOnClickListener(v -> pickEvidenceImage());
+        findViewById(R.id.btn_search).setOnClickListener(v -> { oneTapPublicSearch(); closeDrawer(); });
+        findViewById(R.id.btn_upload_image).setOnClickListener(v -> pickEvidenceImage());
         findViewById(R.id.btn_dork).setOnClickListener(v -> { showDorkSelector(); closeDrawer(); });
         findViewById(R.id.btn_web).setOnClickListener(v -> { browse("https://www.google.com"); closeDrawer(); });
         findViewById(R.id.btn_dark).setOnClickListener(v -> { openDarkWeb(); closeDrawer(); });
@@ -1606,20 +1611,36 @@ public class MainActivity extends AppCompatActivity {
     private void showAbout() {
         new AlertDialog.Builder(this)
                 .setTitle("OSINT Workspace v2.0")
-                .setMessage("All-in-one OSINT tool\n\n" +
-                        "Features:\n" +
-                        "â€¢ Multi-engine search (Google, Bing, DDG, etc.)\n" +
-                        "â€¢ Tor dark web browsing\n" +
-                        "â€¢ VPN management (WireGuard)\n" +
-                        "â€¢ Reverse image & face search\n" +
-                        "â€¢ Leaks search (social, cloud, email, etc.)\n" +
-                        "â€¢ Porn/cams/escort search\n" +
-                        "â€¢ Google dork generator\n" +
-                        "â€¢ HPB & Leaks.io API integration\n" +
-                        "â€¢ Brute force & password tools\n" +
-                        "â€¢ OTP bypass for social platforms\n" +
-                        "â€¢ Live streaming & video player\n" +
-                        "â€¢ File/photo/doc browser\n\n" +
+                .setMessage("All-in-one OSINT tool
+
+" +
+                        "Features:
+" +
+                        "â€¢ Multi-engine search (Google, Bing, DDG, etc.)
+" +
+                        "â€¢ Tor dark web browsing
+" +
+                        "â€¢ VPN management (WireGuard)
+" +
+                        "â€¢ Reverse image & face search
+" +
+                        "â€¢ Leaks search (social, cloud, email, etc.)
+" +
+                        "â€¢ Porn/cams/escort search
+" +
+                        "â€¢ Google dork generator
+" +
+                        "â€¢ HPB & Leaks.io API integration
+" +
+                        "â€¢ Brute force & password tools
+" +
+                        "â€¢ OTP bypass for social platforms
+" +
+                        "â€¢ Live streaming & video player
+" +
+                        "â€¢ File/photo/doc browser
+
+" +
                         "Built with â¤ï¸ for OSINT investigations")
                 .setPositiveButton("OK", null)
                 .show();
@@ -1686,7 +1707,8 @@ public class MainActivity extends AppCompatActivity {
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();
         String line;
-        while ((line = br.readLine()) != null) sb.append(line).append('\n');
+        while ((line = br.readLine()) != null) sb.append(line).append('
+');
         br.close();
         return sb.toString();
     }
