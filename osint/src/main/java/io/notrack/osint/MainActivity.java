@@ -706,7 +706,7 @@ public class MainActivity extends AppCompatActivity {
         for (Map.Entry<String, ArrayList<String[]>> e : byCat.entrySet()) {
             h.append("<div class='cat").append(idx == 0 ? " show" : "").append("' id='cat-").append(escapeHtml(e.getKey())).append("'>");
             for (String[] r : e.getValue()) {
-                h.append("<div class='card'><div class='t'>").append(escapeHtml(r[0])).append("</div><a href='").append(escapeHtml(r[1])).append("' target='_blank'>").append(escapeHtml(r[1])).append("</a><div class='s'>").append(escapeHtml(r[2] == null ? "" : r[2])).append("</div></div>");
+                h.append("<div class='card'><div class='t'>").append(escapeHtml(r[1])).append("</div><a href='").append(escapeHtml(r[2])).append("' target='_blank'>").append(escapeHtml(r[2])).append("</a><div class='s'>").append(escapeHtml(r[3] == null ? "" : r[3])).append("</div></div>");
             }
             h.append("</div>");
             idx++;
