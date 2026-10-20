@@ -1707,8 +1707,7 @@ public class MainActivity extends AppCompatActivity {
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();
         String line;
-        while ((line = br.readLine()) != null) sb.append(line).append('
-');
+        while ((line = br.readLine()) != null) sb.append(line).append('\n');
         br.close();
         return sb.toString();
     }
