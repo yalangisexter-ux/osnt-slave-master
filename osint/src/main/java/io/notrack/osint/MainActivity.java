@@ -771,11 +771,12 @@ public class MainActivity extends AppCompatActivity {
 
     private ArrayList<String> fetchBingImages(String query) {
         ArrayList<String> imgs=new ArrayList<>();
-        HttpURLConnection c=(HttpURLConnection)new URL("https://www.bing.com/images/search?q="+urlEncode(query)).openConnection();
-        c.setRequestMethod("GET"); c.setConnectTimeout(12000); c.setReadTimeout(15000); c.setInstanceFollowRedirects(true);
-        c.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36");
-        c.setRequestProperty("Accept-Language","en-US,en;q=0.9");
+        HttpURLConnection c=null;
         try {
+            c=(HttpURLConnection)new URL("https://www.bing.com/images/search?q="+urlEncode(query)).openConnection();
+            c.setRequestMethod("GET"); c.setConnectTimeout(12000); c.setReadTimeout(15000); c.setInstanceFollowRedirects(true);
+            c.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36");
+            c.setRequestProperty("Accept-Language","en-US,en;q=0.9");
             if(c.getResponseCode()==200){
                 StringBuilder body=new StringBuilder();
                 try(InputStream in=c.getInputStream(); ByteArrayOutputStream bytes=new ByteArrayOutputStream()) {
@@ -786,7 +787,7 @@ public class MainActivity extends AppCompatActivity {
                 Matcher m=Pattern.compile("murl&quot;:&quot;(https?://[^&]+?)&quot;",Pattern.CASE_INSENSITIVE).matcher(body.toString());
                 while(m.find()&&imgs.size()<15){ String u=m.group(1).trim(); if(!u.isEmpty()&&!imgs.contains(u)) imgs.add(u); }
             }
-        } catch(Exception ignored){ } finally { c.disconnect(); }
+        } catch(Exception ignored){ } finally { if(c!=null) c.disconnect(); }
         return imgs;
     }
     private String decodeHtmlEntities(String value) { return value.replace("&amp;","&").replace("&quot;","\\\"").replace("&#x27;","'").replace("&#39;","'").replace("&lt;","<").replace("&gt;",">").replace("&nbsp;"," "); }
