@@ -553,7 +553,7 @@ public class MainActivity extends AppCompatActivity {
             int bodyStart = pendingHtmlReport.toLowerCase(Locale.US).indexOf("<body>");
             int bodyEnd = pendingHtmlReport.toLowerCase(Locale.US).lastIndexOf("</body>");
             if (bodyStart >= 0 && bodyEnd > bodyStart) {
-                htmlReport.append("<section><h2>One-tap search workspace</h2><p>These are prepared source links, not automatically collected provider results. Open each source, verify matches manually, and record the exact URL and collection time.</p>")
+                htmlReport.append("<section><h2>One-tap search results</h2><p>These are the results returned by the configured public search provider during this run, plus recorded failures. They are leads only and require manual source verification.</p>")
                     .append(pendingHtmlReport.substring(bodyStart + 6, bodyEnd)).append("</section>");
             }
         } else {
