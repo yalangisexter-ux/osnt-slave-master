@@ -29,6 +29,8 @@ struct ContentView: View {
     @State private var isCheckingBreach = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var evidenceImage: UIImage?
+    @State private var searchResults: [SearchResult] = []
+    @State private var isSearchingAll = false
 
     private let engines = ["Google", "Bing", "DuckDuckGo", "Brave"]
     private let tools = [
@@ -66,6 +68,12 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    Button { searchAllPublicSources() } label: {
+                        Label("Search All Public Sources", systemImage: "bolt.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.cyan)
                     Button { clearFields() } label: {
                         Label("Clear inputs", systemImage: "xmark.circle")
                     }
@@ -120,8 +128,32 @@ struct ContentView: View {
                     }
                 }
 
+                Section("Search results") {
+                    if isSearchingAll {
+                        ProgressView("Preparing source searches…")
+                    }
+                    if searchResults.isEmpty {
+                        Text("No results yet. Enter a query or identifier and tap Search All Public Sources.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(searchResults) { result in
+                            Button {
+                                open(result.url)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Label(result.title, systemImage: "arrow.up.right.square")
+                                        .font(.headline)
+                                    Text(result.url.absoluteString)
+                                        .font(.caption).foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Section("Status") {
-                    Text(status).font(.footnote).foregroundStyle(.secondary)
+                    Text(status).font(.footnote).foregroundStyle(.secondary).textSelection(.enabled)
                 }
 
                 Section("Responsible use") {
@@ -199,6 +231,34 @@ struct ContentView: View {
         default: base = "https://www.google.com/search?q="
         }
         return URL(string: base + encoded(term))
+    }
+
+    private func searchAllPublicSources() {
+        let terms = [
+            query, name, email, phone, username, domain, targetURL
+        ].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        guard !terms.isEmpty else {
+            status = "Enter at least one search value before starting a one-tap search."
+            return
+        }
+        let combined = terms.map { "\"\\($0)\"" }.joined(separator: " ")
+        let encodedTerm = encoded(combined)
+        let sources: [(String, String)] = [
+            ("Google Web", "https://www.google.com/search?q=\\(encodedTerm)"),
+            ("Bing Web", "https://www.bing.com/search?q=\\(encodedTerm)"),
+            ("DuckDuckGo", "https://duckduckgo.com/?q=\\(encodedTerm)"),
+            ("Brave Search", "https://search.brave.com/search?q=\\(encodedTerm)"),
+            ("Google Images", "https://www.google.com/search?tbm=isch&q=\\(encodedTerm)"),
+            ("Social profiles", "https://www.google.com/search?q=\\(encoded(combined + " site:facebook.com OR site:instagram.com OR site:linkedin.com OR site:x.com OR site:tiktok.com"))"),
+            ("Public documents", "https://www.google.com/search?q=\\(encoded(combined + " filetype:pdf OR filetype:doc OR filetype:docx"))")
+        ]
+        searchResults = sources.compactMap { title, raw in
+            guard let url = URL(string: raw) else { return nil }
+            return SearchResult(title: title, url: url)
+        }
+        isSearchingAll = false
+        status = "Prepared \\(searchResults.count) public-source searches. Select a result below to open it. Searches open external public search pages; they do not guarantee matches."
+        if let first = searchResults.first { open(first.url) }
     }
 
     private func runTool() {
@@ -421,6 +481,12 @@ struct ContentView: View {
         query = ""; domain = ""; targetURL = ""; email = ""; phone = ""; name = ""; username = ""
         status = "Inputs cleared."
     }
+}
+
+struct SearchResult: Identifiable {
+    let id = UUID()
+    let title: String
+    let url: URL
 }
 
 struct BrowserView: UIViewRepresentable {
